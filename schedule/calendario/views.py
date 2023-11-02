@@ -6,14 +6,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 import sys
 import json
 import csv
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QLineEdit, \
-    QRadioButton, QButtonGroup, QMessageBox, QFileDialog
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.db.models import Q
 from django.urls import reverse
 from django.core.checks import messages
 from io import StringIO
+import os
+from django.conf import settings
+from django.http import FileResponse
 
 app_name = 'src'
 
@@ -224,16 +225,28 @@ def json_to_csv(uploaded_file):
             csv_writer.writerow([row[key] for key in csv_data])
 
         csv_io.seek(0)
-        return download_response("converted.csv", csv_io.getvalue())
+
+        # Save the file to a location on the server
+        file_path = os.path.join(settings.MEDIA_ROOT, 'converted.csv')
+        with open(file_path, 'wb') as csv_file:
+            csv_file.write(csv_io.read())
+
+        return file_path  # Return the path to the saved file
     except Exception as e:
         return str(e)
 
-def download_response(filename, content):
-    response = HttpResponse(content_type='text/plain')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    response.write(content)
+
+def download_csv(file_name):
+    file_path = os.path.join(settings.MEDIA_ROOT, 'csv_files', file_name)
+    with open(file_path, 'rb') as csv_file:
+        response = FileResponse(csv_file)
     return response
 
+def download_json(file_name):
+    file_path = os.path.join(settings.MEDIA_ROOT, 'json_files', file_name)
+    with open(file_path, 'rb') as json_file:
+        response = FileResponse(json_file)
+    return response
 
 
 def convertView(request):
@@ -241,12 +254,23 @@ def convertView(request):
         uploaded_file = request.FILES.get('uploaded_file')  # Ensure the input field in your HTML form is named 'uploaded_file'
         if uploaded_file:
             if uploaded_file.name.endswith(".csv"):
-                converted_data = csv_to_json(uploaded_file)
-                return JsonResponse({"converted_data": converted_data})
+                # Handle CSV to JSON conversion
+                file_path = csv_to_json(uploaded_file)
+                file_name = os.path.basename(file_path)
+                with open(file_path, 'r') as file:
+                    file_data = file.read()
+                download_link = reverse('download_json', args=[file_name])
+                return JsonResponse({"download_link": download_link})
             elif uploaded_file.name.endswith(".json"):
-                converted_data = json_to_csv(uploaded_file)
-                return JsonResponse({"converted_data": converted_data})
-    return render(request, 'calendario/teste.html')
+                # Handle JSON to CSV conversion
+                file_path = json_to_csv(uploaded_file)
+                file_name = os.path.basename(file_path)
+                with open(file_path, 'r') as file:
+                    file_data = file.read()
+                download_link = reverse('download_csv', args=[file_name])
+                return JsonResponse({"download_link": download_link})
+    return render(request, 'calendario/homePage.html')
+
 
 
 def home(request):
