@@ -6,6 +6,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 import sys
 import json
 import csv
+import os
+from django.urls import reverse
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.db.models import Q
@@ -95,24 +98,24 @@ app_name = 'src'
 #         # except Exception as e:
 #         #     QMessageBox.critical(self, "Error", "Error converting CSV to JSON: " + str(e))
 #
-#     def json_to_csv(self, input_file_or_url):
-#         try:
-#             with self.get_input_stream(input_file_or_url) as input_stream:
-#                 json_data = json.load(input_stream)
-#                 csv_data = json_data[0].keys()  # Extract the field names
-#
-#                 options = QFileDialog.Options()
-#                 file_path, _ = QFileDialog.getSaveFileName(
-#                     self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
-#
-#                 if file_path:
-#                     with open(file_path, "w", newline="", encoding="utf-8") as csv_file:
-#                         csv_writer = csv.DictWriter(csv_file, csv_data)
-#                         csv_writer.writeheader()
-#                         csv_writer.writerows(json_data)
-#                     QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
-#         except Exception as e:
-#             QMessageBox.critical(self, "Error", "Error converting JSON to CSV: " + str(e))
+    # def json_to_csv(self, input_file_or_url):
+    #     try:
+    #         with self.get_input_stream(input_file_or_url) as input_stream:
+    #             json_data = json.load(input_stream)
+    #             csv_data = json_data[0].keys()  # Extract the field names
+    #
+    #             options = QFileDialog.Options()
+    #             file_path, _ = QFileDialog.getSaveFileName(
+    #                 self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
+    #
+    #             if file_path:
+    #                 with open(file_path, "w", newline="", encoding="utf-8") as csv_file:
+    #                     csv_writer = csv.DictWriter(csv_file, csv_data)
+    #                     csv_writer.writeheader()
+    #                     csv_writer.writerows(json_data)
+    #                 QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
+    #     except Exception as e:
+    #         QMessageBox.critical(self, "Error", "Error converting JSON to CSV: " + str(e))
 #
 #     def get_input_stream(self, input_file_or_url):
 #         if input_file_or_url.startswith("http") or input_file_or_url.startswith("https"):
@@ -204,6 +207,14 @@ app_name = 'src'
 #         print("ola4")
 #     return render(request, 'calendario/homePage.html')
 
+def save_file(file_path, content):
+    try:
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write(content)
+        return file_path
+    except Exception as e:
+        return None
+
 def csv_to_json(uploaded_file):
     try:
         data = uploaded_file.read().decode("utf-8")
@@ -212,33 +223,62 @@ def csv_to_json(uploaded_file):
     except Exception as e:
         return str(e)
 
-def json_to_csv(uploaded_file):
+
+def json_to_csv(input_data, output_file_path):
     try:
-        json_data = json.load(uploaded_file)
-        csv_data = json_data[0].keys()
-        csv_io = StringIO()
+        # Load the JSON data
+        json_data = json.loads(input_data)
 
-        csv_writer = csv.writer(csv_io)
-        csv_writer.writerow(csv_data)
+        if not json_data:
+            raise ValueError("No data found in the JSON input.")
 
-        for row in json_data:
-            csv_writer.writerow([row[key] for key in csv_data])
+        # Extract the field names from the first item in the list
+        field_names = list(json_data[0].keys())
 
-        csv_io.seek(0)
+        # Write the data to a CSV file
+        with open(output_file_path, "w", newline="", encoding="utf-8") as csv_file:
+            csv_writer = csv.writer(csv_file)
 
-        # Save the file to a location on the server
-        file_path = os.path.join(settings.MEDIA_ROOT, 'converted.csv')
-        with open(file_path, 'wb') as csv_file:
-            csv_file.write(csv_io.read())
+            # Write the header row
+            csv_writer.writerow(field_names)
 
-        return file_path  # Return the path to the saved file
+            # Write the data rows
+            for item in json_data:
+                # Split the combined key-value string into separate values
+                values = list(item.values())[0].split(';')
+                csv_writer.writerow(values)
+
+        return True, None
     except Exception as e:
-        return str(e)
+        return False, str(e)
+# def json_to_csv(uploaded_file):
+#     try:
+#         json_data = json.load(uploaded_file)
+#         csv_data = json_data[0].keys()
+#         csv_io = StringIO()
+#
+#         csv_writer = csv.writer(csv_io)
+#         csv_writer.writerow(csv_data)
+#
+#         for row in json_data:
+#             csv_writer.writerow([row[key] for key in csv_data])
+#
+#         csv_io.seek(0)
+#
+#         # Save the file to a location on the server
+#         file_path = os.path.join(settings.MEDIA_ROOT, 'converted.csv')
+#         with open(file_path, 'wb') as csv_file:
+#             csv_file.write(csv_io.read())
+#
+#         return file_path  # Return the path to the saved file
+#     except Exception as e:
+#         return str(e)
 
 
 def download_csv(file_name):
     file_path = os.path.join(settings.MEDIA_ROOT, 'csv_files', file_name)
-    with open(file_path, 'rb') as csv_file:
+    with open(file_path, 'w', encoding="utf-8") as csv_file:
+        csv_file.write()
         response = FileResponse(csv_file)
     return response
 
@@ -249,27 +289,74 @@ def download_json(file_name):
     return response
 
 
+# def convertView(request):
+#     if request.method == 'POST':
+#         uploaded_file = request.FILES.get('uploaded_file')  # Ensure the input field in your HTML form is named 'uploaded_file'
+#         if uploaded_file:
+#             if uploaded_file.name.endswith(".csv"):
+#                 # Handle CSV to JSON conversion
+#                 file_path = csv_to_json(uploaded_file)
+#                 file_name = os.path.basename(file_path)
+#                 with open(file_path, 'r') as file:
+#                     file_data = file.read()
+#                 download_link = reverse('download_json', args=[file_name])
+#                 return JsonResponse({"download_link": download_link})
+#             elif uploaded_file.name.endswith(".json"):
+#                 # Handle JSON to CSV conversion
+#                 file_path = json_to_csv(uploaded_file)
+#                 file_name = os.path.basename(file_path)
+#                 with open(file_path, 'r') as file:
+#                     file_data = file.read()
+#                 download_link = reverse('download_csv', args=[file_name])
+#                 return JsonResponse({"download_link": download_link})
+#     return render(request, 'calendario/homePage.html')
+
+
 def convertView(request):
     if request.method == 'POST':
-        uploaded_file = request.FILES.get('uploaded_file')  # Ensure the input field in your HTML form is named 'uploaded_file'
+        uploaded_file = request.FILES.get(
+            'uploaded_file')  # Ensure the input field in your HTML form is named 'uploaded_file'
         if uploaded_file:
             if uploaded_file.name.endswith(".csv"):
                 # Handle CSV to JSON conversion
                 file_path = csv_to_json(uploaded_file)
-                file_name = os.path.basename(file_path)
-                with open(file_path, 'r') as file:
-                    file_data = file.read()
-                download_link = reverse('download_json', args=[file_name])
-                return JsonResponse({"download_link": download_link})
+                if file_path:
+                    # Define the desired save path for the file
+                    save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidocsv.json"
+
+                    # Save the file using the save_file function
+                    saved_file_path = save_file(save_path, file_path)
+
+                    if saved_file_path:
+                        # If the file was successfully saved, return the download link
+                        file_name = os.path.basename(saved_file_path)
+                        return render(request, 'calendario/homePage.html')
+                        # download_link = reverse('download_file', args=[file_name])
+                        # return JsonResponse({"download_link": download_link})
+                    else:
+                        # Handle the case where the file couldn't be saved
+                        return render(request, 'calendario/homePage.html')
+                        # return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                file_path = json_to_csv(uploaded_file)
-                file_name = os.path.basename(file_path)
-                with open(file_path, 'r') as file:
-                    file_data = file.read()
-                download_link = reverse('download_csv', args=[file_name])
-                return JsonResponse({"download_link": download_link})
-    return render(request, 'calendario/homePage.html')
+                save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidojson.csv"
+                file_path = json_to_csv(uploaded_file, save_path)
+                if file_path:
+                    # Define the desired save path for the file
+
+                    # Save the file using the save_file function
+                    saved_file_path = save_file(save_path, file_path)
+
+                    if saved_file_path:
+                        # If the file was successfully saved, return the download link
+                        file_name = os.path.basename(saved_file_path)
+                        return render(request, 'calendario/homePage.html')
+                        # download_link = reverse('download_file', args=[file_name])
+                        # return JsonResponse({"download_link": download_link})
+                    else:
+                        # Handle the case where the file couldn't be saved
+                        # return JsonResponse({"error": "Failed to save the file."})
+                        return render(request, 'calendario/homePage.html')
 
 
 
