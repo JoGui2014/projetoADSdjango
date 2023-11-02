@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, login
+from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render, redirect, get_object_or_404
 
 # Create your views here.
@@ -359,6 +360,14 @@ def convertView(request):
                         return render(request, 'calendario/homePage.html')
 
 
+def observeCalendar(request):
+    if request.method == 'POST':
+        uploaded_file = request.FILES['file']
+        if uploaded_file:
+            fs = FileSystemStorage()
+            fs.save(uploaded_file.name, uploaded_file)
+
+    return render(request, 'calendario/observeCalendar.html')
 
 def home(request):
     return render(request, 'calendario/homePage.html')

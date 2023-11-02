@@ -8,4 +8,5 @@ urlpatterns = [
     path('convertView/', views.convertView, name='convertView'),
     path('download_csv/<str:file_name>/', views.download_csv, name='download_csv'),
     path('download_json/<str:file_name>/', views.download_json, name='download_json'),
+    path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
 ]

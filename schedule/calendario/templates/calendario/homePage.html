@@ -11,5 +11,12 @@
         <input type="file" id="uploaded_file" name="uploaded_file"><br><br>
         <input type="submit" value="Submit" name="submeter">
     </form>
+    <form method="post" action="{% url 'calendario:observeCalendar' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="file" name="file">
+    <input type="submit" value="Observe this Calendar">
+
+</form>
+</form>
 </body>
 </html>
