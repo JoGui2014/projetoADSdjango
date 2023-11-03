@@ -10,4 +10,5 @@ urlpatterns = [
     path('download_json/<str:file_name>/', views.download_json, name='download_json'),
     path('over_population/', views.over_population, name='over_population'),
     path('class_rooms/', views.class_rooms, name='class_rooms'),
+    path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
 ]
