@@ -17,10 +17,12 @@
         <label for="class_rooms">Select a file:</label>
         <input type="file" id="class_rooms" name="class_rooms"><br><br>
         <input type="submit" value="Submit" name="submeter">
-    </form>
+    </form><br>
+
+    <h1>Overpopulation</h1>
     <form action=" {% url 'calendario:over_population' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <br><br><label for="input_file">Select a file to see the Over Populated classes:</label>
+        <label for="input_file">Select a file to see the Over Populated classes:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
         <input type="submit" value="Ver aulas em sobrelotação" name="over_population">
     </form>
