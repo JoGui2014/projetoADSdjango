@@ -135,77 +135,52 @@ app_name = 'src'
 #         except Exception as e:
 #             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
 #
-#     #Inês
-#     def over_population_button_clicked(self):
-#         input_file = self.input_file_text.text()
-#
-#         if ".json" in input_file:
-#             input_file = self.json_to_csv(self, input_file)
-#
-#         try:
-#             with self.get_input_stream(input_file) as input_stream:
-#                 csv_data = input_stream.read().decode("utf-8")
-#                 csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
-#
-#                 if csv_data:
-#                     header_row = csv_data[0]
-#                     lotacao_index = -1  # Initialize with an invalid index
-#                     inscritos_index = -1  # Initialize with an invalid index
-#
-#                     # Find the index of the columns dynamically
-#                     for index, column_name in enumerate(header_row):
-#                         if "Lotação" in column_name:
-#                             lotacao_index = index
-#                         if "Inscritos no turno" in column_name:
-#                             inscritos_index = index
-#
-#                     if lotacao_index != -1 and inscritos_index != -1:
-#                         # Valid columns found, proceed with checking for overpopulation
-#
-#                         with open("overpopulated_classes.csv", "w", newline="", encoding="utf-8") as csv_file:
-#                             csv_writer = csv.writer(csv_file)
-#
-#                             # Write the header row to the output file
-#                             csv_writer.writerow(header_row)
-#
-#                             for row in csv_data[1:]:
-#                                 try:
-#                                     lotacao = int(row[lotacao_index])
-#                                     inscritos = int(row[inscritos_index])
-#                                     if isinstance(lotacao, int) and isinstance(inscritos, int):
-#                                         if inscritos > lotacao:
-#                                             print(row)
-#                                             csv_writer.writerow(row)
-#                                 except ValueError as e:
-#                                     pass
-#                         csv_file.close()
-#
-#         except Exception as e:
-#             QMessageBox.critical(self, "Error", "Error showing Over Population: " + str(e))
-#
-#         # Display a message indicating the process is complete
-#         QMessageBox.information(self, "Overpopulation Classes", "Overpopulated classes have been saved to 'overpopulated_classes.csv'.")
-#
-# if __name__ == '__main__':
-#     app = QApplication(sys.argv)
-#     ex = AppGUI()
-#     ex.show()
-#     sys.exit(app.exec_())
+#Inês
+def over_population(request):
+    if request.method == 'POST':
+        file = request.FILES.get('input_file')
 
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Please upload a valid CSV file")
 
-# def convertView(request):
-#     print("ola1")
-#     if request.method == 'POST':
-#         uploaded_file = request.POST.get('uploaded_file')  # Add a hidden input field in your HTML form for this
-#         print("ola2")
-#
-#         # Instantiate the AppGUI class
-#         # aplicacao = AppGUI()
-#         print("ola3")
-#         app = AppGUI()
-#         app.convert_button_clicked(uploaded_file)
-#         print("ola4")
-#     return render(request, 'calendario/homePage.html')
+    try:
+        with file as input_stream:
+            csv_data = input_stream.read().decode("utf-8")
+            csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
+
+            if csv_data:
+                lotacao_index = -1  # Initialize with an invalid index
+                inscritos_index = -1  # Initialize with an invalid index
+
+                header_row = csv_data[0]
+
+                # Find the index of the columns dynamically
+                for index, column_name in enumerate(header_row):
+                    if "Lotação" in column_name:
+                        lotacao_index = index
+                    if "Inscritos no turno" in column_name:
+                        inscritos_index = index
+
+                if lotacao_index != -1 and inscritos_index != -1:
+                    # Valid columns found, proceed with checking for overpopulation
+
+                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
+                    with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
+                        csv_writer = csv.writer(csv_file)
+                        csv_writer.writerow(header_row)
+                        for row in csv_data[1:]:
+                            try:
+                                lotacao = int(row[lotacao_index])
+                                inscritos = int(row[inscritos_index])
+                                if isinstance(lotacao, int) and isinstance(inscritos, int):
+                                    if inscritos > lotacao:
+                                        print(row)
+                                        csv_writer.writerow(row)
+                            except ValueError as e:
+                                pass
+    except Exception as e:
+        return HttpResponse(str(e))
+    return render(request, 'calendario/homePage.html')
 
 def save_file(file_path, content):
     try:
@@ -322,7 +297,7 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidocsv.json"
+                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
 
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
@@ -339,7 +314,7 @@ def convertView(request):
                         # return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidojson.csv"
+                save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoCsv.csv"
                 file_path = json_to_csv(uploaded_file, save_path)
                 if file_path:
                     # Define the desired save path for the file
@@ -358,7 +333,8 @@ def convertView(request):
                         # return JsonResponse({"error": "Failed to save the file."})
                         return render(request, 'calendario/homePage.html')
 
-
+def class_rooms(request):
+    return render(request, 'calendario/homePage.html')
 
 def home(request):
     return render(request, 'calendario/homePage.html')
