@@ -360,6 +360,18 @@ def convertView(request):
     return render(request, 'calendario/homePage.html')
 
 def class_rooms(request):
+    if request.method == 'POST':
+        file = request.FILES.get('class_rooms')
+
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Please upload a valid CSV file")
+    save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroSalas.csv"
+    try:
+        file_content = file.read().decode("utf-8")
+        saved_file_path = save_file(save_path, file_content)
+    except Exception as e:
+        return HttpResponse(f"Error processing the uploaded file: {str(e)}")
+
     return render(request, 'calendario/homePage.html')
 
 # def convertView(request):
