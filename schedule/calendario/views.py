@@ -59,13 +59,6 @@ app_name = 'src'
 #     #     self.convert_button.clicked.connect(self.convert_button_clicked)
 #     #     self.layout.addWidget(self.convert_button)
 #     #
-#     #     #Inês
-#     #     self.over_population_button = QPushButton("Aulas em Sobrelotação", self)
-#     #     self.over_population_button.clicked.connect(self.over_population_button_clicked)
-#     #     self.layout.addWidget(self.over_population_button)
-#     #
-#     #     self.centralWidget().setLayout(self.layout)
-#
 #     def convert_button_clicked(self, input_file_or_url):
 #         # input_file_or_url = self.input_file_text.text()
 #         option = 2
@@ -136,23 +129,21 @@ app_name = 'src'
 #         except Exception as e:
 #             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
 #
-#Inês
-def over_population(request):
-    if request.method == 'POST':
-        file = request.FILES.get('input_file')
 
-    if not file.name.endswith('.csv'):
-        return HttpResponse("Please upload a valid CSV file")
+def over_population(file):
+    #if request.method == 'POST':
+    #    file = request.FILES.get('input_file')
 
+    #if not file.name.endswith('.csv'):
+    #    return HttpResponse("Please upload a valid CSV file")
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
             csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
-
             if csv_data:
                 lotacao_index = -1  # Initialize with an invalid index
                 inscritos_index = -1  # Initialize with an invalid index
-
+                sala_index=-1
                 header_row = csv_data[0]
 
                 # Find the index of the columns dynamically
@@ -161,8 +152,14 @@ def over_population(request):
                         lotacao_index = index
                     if "Inscritos no turno" in column_name:
                         inscritos_index = index
+                    if "Sala da aula" in column_name:
+                        sala_index = index
+                if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1:
+                    count = 0
+                    sum_students = 0
+                    aulas_sem_sala = 0
+                    total_aulas=0
 
-                if lotacao_index != -1 and inscritos_index != -1:
                     # Valid columns found, proceed with checking for overpopulation
 
                     save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
@@ -175,13 +172,43 @@ def over_population(request):
                                 inscritos = int(row[inscritos_index])
                                 if isinstance(lotacao, int) and isinstance(inscritos, int):
                                     if inscritos > lotacao:
-                                        print(row)
                                         csv_writer.writerow(row)
+                                        count+=1
+                                        sum_students+=(inscritos-lotacao)
+                                sala = row[sala_index]
+                                aulas_sem_sala+=1
                             except ValueError as e:
-                                pass
+                                str(e)
+                            total_aulas+=1
+                    return count, sum_students, total_aulas-aulas_sem_sala
     except Exception as e:
+        return None
+
+def get_number_overpopulation_classes(request):
+    if request.method == 'POST':
+        file = request.FILES.get('input_file')
+
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Please upload a valid CSV file")
+    try:
+        result = over_population(file)
+        if result is None:
+            return HttpResponse("An error occurred while processing the file.")
+        number, sum_students, aulas_sem_sala = result
+        if number==0:
+            return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
+        if sum_students==0:
+            return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
+        if aulas_sem_sala==0:
+            return HttpResponse("Erro ao recolher número de aulas sem sala.")
+            #Número de alunos em sobrelotação é número de alunos a mais em cada sobrelotação ou número total dessas aulas???
+        return HttpResponse(
+            f"Number of overpopulated classes: {number}<br>"
+            f"Number of students with overpopulated classes: {sum_students}<br>"
+            f"Number of Classes without given Class Rooms: {aulas_sem_sala}"
+        )
+    except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
-    return render(request, 'calendario/homePage.html')
 
 def save_file(file_path, content):
     try:

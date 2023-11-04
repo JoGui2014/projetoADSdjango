@@ -4,8 +4,9 @@
 <title>Calendar</title>
 </head>
 <body>
+
     <h1>Choose Classes Schedule Local File To Convert</h1>
-    <form action=" {% url 'calendario:convertView' %}" method="post" enctype="multipart/form-data">
+    <form id="schedule_form" action=" {% url 'calendario:convertView' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <label for="uploaded_file">Select a file:</label>
         <input type="file" id="uploaded_file" name="uploaded_file"><br><br>
@@ -18,20 +19,18 @@
         <input type="file" id="class_rooms" name="class_rooms"><br><br>
         <input type="submit" value="Submit" name="submeter">
     </form><br>
-
-    <h1>Overpopulation</h1>
+    <h1>Critérios de qualidade</h1>
     <form action=" {% url 'calendario:over_population' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="input_file">Select a file to see the Over Populated classes:</label>
+        <label for="input_file">Select a file to see informations of the classes:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
-        <input type="submit" value="Ver aulas em sobrelotação" name="over_population">
+        <input type="submit" value="Ver informações" name="over_population">
     </form>
+    <h1>Visualizar</h1>
     <form method="post" action="{% url 'calendario:observeCalendar' %}" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="file" name="file">
     <input type="submit" value="Observe this Calendar">
-
-</form>
 </form>
 </body>
-</html>
+ </html>
