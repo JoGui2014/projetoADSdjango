@@ -130,12 +130,7 @@ app_name = 'src'
 #             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
 #
 
-def over_population(file):
-    #if request.method == 'POST':
-    #    file = request.FILES.get('input_file')
-
-    #if not file.name.endswith('.csv'):
-    #    return HttpResponse("Please upload a valid CSV file")
+def get_information_sections(file):
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
@@ -143,8 +138,13 @@ def over_population(file):
             if csv_data:
                 lotacao_index = -1  # Initialize with an invalid index
                 inscritos_index = -1  # Initialize with an invalid index
+                # Vale a pena usar sala quando se pode usar as características???
                 sala_index=-1
+                sala_expectavel=-1
+                sala_real=-1
                 header_row = csv_data[0]
+                salas_desperdiçadas=0
+                salas_sem_caracteristicas=0
 
                 # Find the index of the columns dynamically
                 for index, column_name in enumerate(header_row):
@@ -154,11 +154,18 @@ def over_population(file):
                         inscritos_index = index
                     if "Sala da aula" in column_name:
                         sala_index = index
-                if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1:
+                    if "Características da sala pedida para a aula" in column_name:
+                        sala_expectavel = index
+                    if "Características reais da sala" in column_name:
+                        sala_real = index
+                #Separar???
+                if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1 and sala_expectavel!=-1 and sala_real!=-1:
                     count = 0
                     sum_students = 0
                     aulas_sem_sala = 0
                     total_aulas=0
+                    tipo_de_sala_expectado=None
+                    tipo_de_sala_real=None
 
                     # Valid columns found, proceed with checking for overpopulation
 
@@ -177,35 +184,85 @@ def over_population(file):
                                         sum_students+=(inscritos-lotacao)
                                 sala = row[sala_index]
                                 aulas_sem_sala+=1
+                                tipo_de_sala_expectado = row[sala_expectavel]
+                                tipo_de_sala_real = row[sala_real]
+                                result = get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real)
+                                salas_desperdiçadas+=result[0]
+                                salas_sem_caracteristicas+=result[1]
                             except ValueError as e:
                                 str(e)
                             total_aulas+=1
-                    return count, sum_students, total_aulas-aulas_sem_sala
+                    #print(tipos_de_sala_1, tipos_de_sala_2)
+                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas
     except Exception as e:
         return None
 
-def get_number_overpopulation_classes(request):
+def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
+    salas_sem_caracteristicas=0
+    salas_desperdiçadas=0
+    #list=[]
+    # Pedir Sala de Aulas e sair Arq???
+    if "Arq" in tipo_de_sala_expectado.strip() and ("Arq" not in tipo_de_sala_real.strip() and "Computadores" not in tipo_de_sala_expectado.strip()):
+        salas_sem_caracteristicas+=1
+    if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Computadores" not in tipo_de_sala_real.strip()):
+        salas_desperdiçadas += 1
+    # if "Lab" in tipo_de_sala_expectado.strip() and (tipo_de_sala_expectado.strip() not in tipo_de_sala_real.strip()):
+    #     salas_sem_caracteristicas += 1
+    # if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()):
+    #     salas_desperdiçadas += 1
+    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_sem_caracteristicas += 1
+    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas += 1
+    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_sem_caracteristicas += 1
+    # Se for de aulas???
+    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas += 1
+    #Videoconferencia????
+    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_sem_caracteristicas+=1
+    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas+=1
+    # if ("Aulas" or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
+    #     salas_desperdiçadas+=1
+    # if ("Aulas" in tipo_de_sala_expectado or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
+    #     salas_sem_caracteristicas+=1
+    # if salas_sem_caracteristicas!=0 or salas_desperdiçadas!=0:
+    #     if (tipo_de_sala_expectado, tipo_de_sala_real) not in list:
+    #         list.append((tipo_de_sala_expectado, tipo_de_sala_real))
+    #         print(list[-1])
+    #
+    return salas_desperdiçadas, salas_sem_caracteristicas
+
+def get_informations(request):
     if request.method == 'POST':
         file = request.FILES.get('input_file')
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
     try:
-        result = over_population(file)
+        result = get_information_sections(file)
         if result is None:
             return HttpResponse("An error occurred while processing the file.")
-        number, sum_students, aulas_sem_sala = result
+        number, sum_students, aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas = result
         if number==0:
             return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
         if sum_students==0:
-            return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
+            return HttpResponse("Erro ao recolher número de alunos com aulas em sobrelotação.")
         if aulas_sem_sala==0:
-            return HttpResponse("Erro ao recolher número de aulas sem sala.")
+            return HttpResponse("Erro ao recolher número de aulas sem sala atribuída.")
+        if salas_desperdiçadas == 0:
+            return HttpResponse("Erro ao recolher número de características desperdiçadas nas salas atribuídas às aulas.")
+        if salas_sem_caracteristicas == 0:
+            return HttpResponse("Erro ao recolher número de salas sem as características solicitadas pelo docente.")
             #Número de alunos em sobrelotação é número de alunos a mais em cada sobrelotação ou número total dessas aulas???
         return HttpResponse(
-            f"Number of overpopulated classes: {number}<br>"
-            f"Number of students with overpopulated classes: {sum_students}<br>"
-            f"Number of Classes without given Class Rooms: {aulas_sem_sala}"
+            f"Número de aulas em sobrelotação: {number}<br>"
+            f"Número de alunos com aulas em sobrelotação: {sum_students}<br>"
+            f"Número de aulas sem sala atribuída: {aulas_sem_sala}<br>"
+           f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdiçadas}<br>"
+           f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
         )
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
