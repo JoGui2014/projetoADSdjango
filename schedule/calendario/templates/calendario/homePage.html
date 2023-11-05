@@ -20,11 +20,11 @@
         <input type="submit" value="Submit" name="submeter">
     </form><br>
     <h1>Critérios de qualidade</h1>
-    <form action=" {% url 'calendario:over_population' %}" method="post" enctype="multipart/form-data">
+    <form action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <label for="input_file">Select a file to see informations of the classes:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
-        <input type="submit" value="Ver informações" name="over_population">
+        <input type="submit" value="Ver informações" name="get_informations">
     </form>
     <h1>Visualizar</h1>
     <form method="post" action="{% url 'calendario:observeCalendar' %}" enctype="multipart/form-data">

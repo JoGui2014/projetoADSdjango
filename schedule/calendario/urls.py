@@ -8,7 +8,7 @@ urlpatterns = [
     path('convertView/', views.convertView, name='convertView'),
     path('download_csv/<str:file_name>/', views.download_csv, name='download_csv'),
     path('download_json/<str:file_name>/', views.download_json, name='download_json'),
-    path('over_population/', views.get_number_overpopulation_classes, name='over_population'),
+    path('informations/', views.get_informations, name='get_informations'),
     path('class_rooms/', views.class_rooms, name='class_rooms'),
     path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
 ]
