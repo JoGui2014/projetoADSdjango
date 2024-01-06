@@ -6,6 +6,12 @@
 
 </head>
 <body>
-
+   <h1>Critérios de qualidade</h1>
+    <form id="form_criterios_qualidade" action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="input_file">Select a file to see informations of the classes:</label>
+        <input type="file" id="input_file" name="input_file"><br><br>
+        <input type="submit" Value="Ver informações">
+    </form>
 </body>
 </html>
