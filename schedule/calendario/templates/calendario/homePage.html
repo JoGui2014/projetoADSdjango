@@ -12,6 +12,7 @@
         <input type="file" id="uploaded_file" name="uploaded_file"><br><br>
         <input type="submit" value="Submit" name="submeter">
     </form>
+
     <h1>Choose Class Rooms Local File To Convert</h1>
     <form action=" {% url 'calendario:class_rooms' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
@@ -19,13 +20,27 @@
         <input type="file" id="class_rooms" name="class_rooms"><br><br>
         <input type="submit" value="Submit" name="submeter">
     </form><br>
+
     <h1>Critérios de qualidade</h1>
-    <form action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
+    <form id="form_criterios_qualidade" action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <label for="input_file">Select a file to see informations of the classes:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
-        <input type="submit" value="Ver informações" name="get_informations">
+
+        <label for="class_rooms">Please write the number of the column that describes the follow features, in the file:</label>
+        <br><br><label>Lotação das salas:</label>
+        <input type="number" id="lotacao_index" name="lotacao_index"><br><br>
+        <label>Número de inscritos na aula:</label>
+        <input type="number" id="inscritos_index" name="inscritos_index"><br><br>
+        <label>Características pedidas para a sala:</label>
+        <input type="number" id="sala_expectavel" name="sala_expectavel"><br><br>
+        <label>Caracteristicas reais da sala:</label>
+        <input type="number" id="sala_real" name="sala_real"><br><br>
+        <label>Sala de Aulas:</label>
+        <input type="number" id="sala_index" name="sala_index"><br><br>
+        <input type="submit" Value="Ver informações">
     </form>
+
     <h1>Visualizar</h1>
     <form method="post" action="{% url 'calendario:observeCalendar' %}" enctype="multipart/form-data">
     {% csrf_token %}
