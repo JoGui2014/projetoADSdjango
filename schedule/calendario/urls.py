@@ -11,4 +11,5 @@ urlpatterns = [
     path('informations/', views.get_informations, name='get_informations'),
     path('class_rooms/', views.class_rooms, name='class_rooms'),
     path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
+
 ]

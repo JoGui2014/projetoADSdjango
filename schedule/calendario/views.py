@@ -130,7 +130,50 @@ app_name = 'src'
 #             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
 #
 
-def get_information_sections(file, lotacao_index, inscritos_index, sala_expectavel, sala_real, sala_index):
+def observeCalendar(request):
+    global curso_index
+    global unidade_execucao_index
+    global turno_index
+    global turma_index
+    global inscritos_index
+    global dia_semana_index
+    global inicio_index
+    global fim_index
+    global dia_index
+    global sala_expectavel
+    global sala_index
+    global lotacao_index
+    global sala_real
+
+
+    if request.method == 'POST':
+        uploaded_file = request.FILES['file']
+        if uploaded_file:
+            fs = FileSystemStorage()
+            fs.save(uploaded_file.name, uploaded_file)
+
+    try:
+        curso_index = int(request.POST.get('curso_index'))
+        unidade_execucao_index = int(request.POST.get('unidade_execucao_index'))
+        turno_index = int(request.POST.get('turno_index'))
+        turma_index = int(request.POST.get('turma_index'))
+        inscritos_index = int(request.POST.get('inscritos_index'))
+        dia_semana_index = int(request.POST.get('dia_semana_index'))
+        inicio_index = int(request.POST.get('inicio_index'))
+        fim_index = int(request.POST.get('fim_index'))
+        dia_index = int(request.POST.get('dia_index'))
+        sala_expectavel = int(request.POST.get('sala_expectavel'))
+        sala_index = int(request.POST.get('sala_index'))
+        lotacao_index = int(request.POST.get('lotacao_index'))
+        sala_real = int(request.POST.get('sala_real'))
+    except ValueError:
+        # Handle the case where conversion to int fails
+        return HttpResponse("Invalid input for indices. Please provide valid integer values.")
+
+    return render(request, 'calendario/observeCalendar.html')
+
+def get_information_sections(file):
+    global lotacao_index, inscritos_index, sala_index, sala_expectavel, sala_real
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
@@ -138,12 +181,9 @@ def get_information_sections(file, lotacao_index, inscritos_index, sala_expectav
             header_row = csv_data[0]
 
             if csv_data:
-                print("ola")
                 salas_desperdicadas=0
                 salas_sem_caracteristicas=0
-
                 if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1 and sala_expectavel!=-1 and sala_real!=-1:
-                    print("Olaola")
                     count = 0
                     sum_students = 0
                     aulas_sem_sala = 0
@@ -212,21 +252,12 @@ def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
 def get_informations(request):
     if request.method == 'POST':
         file = request.FILES.get('input_file')
-        try:
-            lotacao_index = int(request.POST.get('lotacao_index'))
-            inscritos_index = int(request.POST.get('inscritos_index'))
-            sala_expectavel = int(request.POST.get('sala_expectavel'))
-            sala_real = int(request.POST.get('sala_real'))
-            sala_index = int(request.POST.get('sala_index'))
-        except ValueError:
-        # Handle the case where conversion to int fails
-            return HttpResponse("Invalid input for indices. Please provide valid integer values.")
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
 
     try:
-        result = get_information_sections(file, lotacao_index, inscritos_index, sala_expectavel, sala_real, sala_index)
+        result = get_information_sections(file)
         if result is None:
             return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
 
@@ -491,16 +522,6 @@ def class_rooms(request):
 #                 else:
 #                     # Handle the case where the conversion or file saving failed
 #                     return HttpResponse(f"Conversion failed with the following error: {error}")
-
-
-def observeCalendar(request):
-    if request.method == 'POST':
-        uploaded_file = request.FILES['file']
-        if uploaded_file:
-            fs = FileSystemStorage()
-            fs.save(uploaded_file.name, uploaded_file)
-
-    return render(request, 'calendario/observeCalendar.html')
 
 def home(request):
     return render(request, 'calendario/homePage.html')
