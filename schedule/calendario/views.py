@@ -15,7 +15,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.db.models import Q
 from django.urls import reverse
 from django.core.checks import messages
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import os
 from django.conf import settings
 from django.http import FileResponse
@@ -169,7 +169,7 @@ def get_information_sections(file):
 
                     # Valid columns found, proceed with checking for overpopulation
 
-                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
+                    save_path = save_path = "C:\\Users\\danie\\PycharmProjects\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow(header_row)
@@ -409,7 +409,7 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
+                    save_path = save_path = "C:\\Users\\danie\\PycharmProjects\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
 
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
@@ -424,7 +424,7 @@ def convertView(request):
                         return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidojson.csv"
+                save_path = "C:\\Users\\danie\\PycharmProjects\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidojson.csv"
                 success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
 
                 if success:
@@ -449,7 +449,7 @@ def class_rooms(request):
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
-    save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroSalas.csv"
+    save_path = "C:\\Users\\danie\\PycharmProjects\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroSalas.csv"
     try:
         file_content = file.read().decode("utf-8")
         saved_file_path = save_file(save_path, file_content)
@@ -509,13 +509,39 @@ def class_rooms(request):
 
 
 def observeCalendar(request):
-    if request.method == 'POST':
+    if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
         if uploaded_file:
+
+            if uploaded_file.name.endswith('.csv'):
+
+                result = process_calendar_file_csv(uploaded_file)
+                return render(request, 'calendario/observeCalendar.html', {'result': result})
+
             fs = FileSystemStorage()
             fs.save(uploaded_file.name, uploaded_file)
 
     return render(request, 'calendario/observeCalendar.html')
+
+def process_calendar_file_csv(upload_file):
+    data = upload_file.read().decode("utf-8").splitlines()
+
+    # Get the header row and the data rows
+    header = data[0]
+    rows = data[1:]
+
+    # Split the header into field names
+    field_names = header.split(';')
+
+    # Create a list of dictionaries
+    result = []
+    for row in rows:
+        values = row.split(';')
+        item = {}
+        for i, field_name in enumerate(field_names):
+            item[field_name] = values[i]
+        result.append(item)
+    return result
 
 def home(request):
     return render(request, 'calendario/homePage.html')
