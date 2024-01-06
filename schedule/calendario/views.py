@@ -130,36 +130,20 @@ app_name = 'src'
 #             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
 #
 
-def get_information_sections(file):
+def get_information_sections(file, lotacao_index, inscritos_index, sala_expectavel, sala_real, sala_index):
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
             csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
+            header_row = csv_data[0]
+
             if csv_data:
-                lotacao_index = -1  # Initialize with an invalid index
-                inscritos_index = -1  # Initialize with an invalid index
-                # Vale a pena usar sala quando se pode usar as características???
-                sala_index=-1
-                sala_expectavel=-1
-                sala_real=-1
-                header_row = csv_data[0]
-                salas_desperdiçadas=0
+                print("ola")
+                salas_desperdicadas=0
                 salas_sem_caracteristicas=0
 
-                # Find the index of the columns dynamically
-                for index, column_name in enumerate(header_row):
-                    if "Lotação" in column_name:
-                        lotacao_index = index
-                    if "Inscritos no turno" in column_name:
-                        inscritos_index = index
-                    if "Sala da aula" in column_name:
-                        sala_index = index
-                    if "Características da sala pedida para a aula" in column_name:
-                        sala_expectavel = index
-                    if "Características reais da sala" in column_name:
-                        sala_real = index
-                #Separar???
                 if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1 and sala_expectavel!=-1 and sala_real!=-1:
+                    print("Olaola")
                     count = 0
                     sum_students = 0
                     aulas_sem_sala = 0
@@ -167,9 +151,7 @@ def get_information_sections(file):
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
 
-                    # Valid columns found, proceed with checking for overpopulation
-
-                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
+                    save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\overpopulated_classes.csv"
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow(header_row)
@@ -187,72 +169,75 @@ def get_information_sections(file):
                                 tipo_de_sala_expectado = row[sala_expectavel]
                                 tipo_de_sala_real = row[sala_real]
                                 result = get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real)
-                                salas_desperdiçadas+=result[0]
+                                salas_desperdicadas+=result[0]
                                 salas_sem_caracteristicas+=result[1]
                             except ValueError as e:
-                                str(e)
+                                print(str(e))
                             total_aulas+=1
-                    #print(tipos_de_sala_1, tipos_de_sala_2)
-                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas
+                        print("olaolaola")
+                    print(count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas)
+                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
     except Exception as e:
-        return None
+        return print(str(e))
 
 def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
     salas_sem_caracteristicas=0
-    salas_desperdiçadas=0
+    salas_desperdicadas=0
     #list=[]
-    # Pedir Sala de Aulas e sair Arq???
     if "Arq" in tipo_de_sala_expectado.strip() and ("Arq" not in tipo_de_sala_real.strip() and "Computadores" not in tipo_de_sala_expectado.strip()):
         salas_sem_caracteristicas+=1
-    if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Computadores" not in tipo_de_sala_real.strip()):
-        salas_desperdiçadas += 1
-    # if "Lab" in tipo_de_sala_expectado.strip() and (tipo_de_sala_expectado.strip() not in tipo_de_sala_real.strip()):
-    #     salas_sem_caracteristicas += 1
-    # if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()):
-    #     salas_desperdiçadas += 1
-    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Aulas" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_expectado and "Computadores" not in tipo_de_sala_real.strip()):
+        salas_desperdicadas += 1
+    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas += 1
-    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas += 1
+    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    # Se for de aulas???
-    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas += 1
-    #Videoconferencia????
-    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas += 1
+    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas+=1
-    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas+=1
-    # if ("Aulas" or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
-    #     salas_desperdiçadas+=1
-    # if ("Aulas" in tipo_de_sala_expectado or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
-    #     salas_sem_caracteristicas+=1
-    # if salas_sem_caracteristicas!=0 or salas_desperdiçadas!=0:
+    if "videoconferencia" in tipo_de_sala_real and "videoconferencia" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas+=1
+    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas+=1
+    # if salas_sem_caracteristicas!=0 or salas_desperdicadas!=0:
     #     if (tipo_de_sala_expectado, tipo_de_sala_real) not in list:
     #         list.append((tipo_de_sala_expectado, tipo_de_sala_real))
     #         print(list[-1])
-    #
-    return salas_desperdiçadas, salas_sem_caracteristicas
+
+    return salas_desperdicadas, salas_sem_caracteristicas
 
 def get_informations(request):
     if request.method == 'POST':
         file = request.FILES.get('input_file')
+        try:
+            lotacao_index = int(request.POST.get('lotacao_index'))
+            inscritos_index = int(request.POST.get('inscritos_index'))
+            sala_expectavel = int(request.POST.get('sala_expectavel'))
+            sala_real = int(request.POST.get('sala_real'))
+            sala_index = int(request.POST.get('sala_index'))
+        except ValueError:
+        # Handle the case where conversion to int fails
+            return HttpResponse("Invalid input for indices. Please provide valid integer values.")
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
+
     try:
-        result = get_information_sections(file)
+        result = get_information_sections(file, lotacao_index, inscritos_index, sala_expectavel, sala_real, sala_index)
         if result is None:
-            return HttpResponse("An error occurred while processing the file.")
-        number, sum_students, aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas = result
+            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
+
+        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
         if number==0:
             return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
         if sum_students==0:
             return HttpResponse("Erro ao recolher número de alunos com aulas em sobrelotação.")
         if aulas_sem_sala==0:
             return HttpResponse("Erro ao recolher número de aulas sem sala atribuída.")
-        if salas_desperdiçadas == 0:
+        if salas_desperdicadas == 0:
             return HttpResponse("Erro ao recolher número de características desperdiçadas nas salas atribuídas às aulas.")
         if salas_sem_caracteristicas == 0:
             return HttpResponse("Erro ao recolher número de salas sem as características solicitadas pelo docente.")
@@ -261,8 +246,8 @@ def get_informations(request):
             f"Número de aulas em sobrelotação: {number}<br>"
             f"Número de alunos com aulas em sobrelotação: {sum_students}<br>"
             f"Número de aulas sem sala atribuída: {aulas_sem_sala}<br>"
-           f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdiçadas}<br>"
-           f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
+            f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdicadas}<br>"
+            f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
         )
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
@@ -519,4 +504,3 @@ def observeCalendar(request):
 
 def home(request):
     return render(request, 'calendario/homePage.html')
-
