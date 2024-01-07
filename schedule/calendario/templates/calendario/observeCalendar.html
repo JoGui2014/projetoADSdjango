@@ -26,7 +26,7 @@
         editable: true,
         eventSources: [
           {
-            url: '/observe-calendar/',  // Update this to the URL of your Django view
+            url: '{% url "observeCalendar" %}',  // Update this to the URL of your Django view
             method: 'POST',
             failure: function() {
               alert('There was an error while fetching events!');
@@ -36,13 +36,16 @@
             events: function(info, successCallback, failureCallback) {
               $.ajax({
                 type: 'POST',
-                url: '/observe-calendar/',  // Update this to the URL of your Django view
+                url: '{% url "observeCalendar" %}',  // Update this to the URL of your Django view
                 data: new FormData($('#calendar-form')[0]),  // Assuming you have a form with id 'calendar-form'
                 processData: false,
                 contentType: false,
                 success: function(data) {
+                  success: function(data) {
                   if (data.calendarData) {
-                    successCallback(data.calendarData);
+                    data.calendarData.forEach(function(eventData) {
+                      calendar.addEvent(eventData);
+                    });
                   } else {
                     alert('No calendar data received.');
                     failureCallback();

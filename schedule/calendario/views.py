@@ -459,12 +459,12 @@ def convert_result_to_calendar_format(result):
     calendar_data = []
 
     for item in result:
+        title = f"{item.get('Curso', '')} - {item.get('Unidade de execução', '')}"
         event = {
-            'title': f"{item['Curso']} - {item['Unidade de execução']}",
-            'start': f"{item['Dia']}T{item['Início']}",
-            'end': f"{item['Dia']}T{item['Fim']}",
+            'title': title,
+            'start': f"{item.get('Dia', '')}T{item.get('Início', '')}",
+            'end': f"{item.get('Dia', '')}T{item.get('Fim', '')}",
         }
         calendar_data.append(event)
 
     return calendar_data
-
