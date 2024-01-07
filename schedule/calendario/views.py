@@ -4,6 +4,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 # Create your views here.
 
+
+from django.http import JsonResponse
 import sys
 import json
 import csv
@@ -21,115 +23,6 @@ from django.conf import settings
 from django.http import FileResponse
 
 app_name = 'src'
-
-# def convertView(request):
-#     if request.method == 'POST':
-#         form = ArquivoForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             uploaded_file = form.cleaned_data['arquivo']
-#             app = appGUI()
-#             app.convert_button_clicked(uploaded_file)
-#     else:
-#         form = ArquivoForm()
-#     return render(request, 'homePage.html', {'form': form})
-
-# class AppGUI():
-#     def __init__(self):
-#         super().__init__()
-#         # self.initUI()
-#
-#     # def initUI(self):
-#     #     self.setWindowTitle("Calendar Tools")
-#     #     self.setFixedSize(400, 250)
-#     #
-#     #     central_widget = QWidget()
-#     #     self.setCentralWidget(central_widget)
-#     #
-#     #     self.layout = QVBoxLayout()
-#     #
-#     #     self.input_label = QLabel("Input File/URL:", self)
-#     #     self.layout.addWidget(self.input_label)
-#     #
-#     #     self.input_file_text = QLineEdit(self)
-#     #     self.layout.addWidget(self.input_file_text)
-#     #
-#     #     self.button_group = QButtonGroup(self)
-#     #
-#     #     self.convert_button = QPushButton("Convert", self)
-#     #     self.convert_button.clicked.connect(self.convert_button_clicked)
-#     #     self.layout.addWidget(self.convert_button)
-#     #
-#     def convert_button_clicked(self, input_file_or_url):
-#         # input_file_or_url = self.input_file_text.text()
-#         option = 2
-#
-#         if ".csv" in input_file_or_url:
-#             option = 1
-#
-#         # try:
-#         if option == 1:
-#             AppGUI.csv_to_json(input_file_or_url)
-#         elif option == 2:
-#             AppGUI.json_to_csv(input_file_or_url)
-#         # else:
-#                 # raise ValueError("Invalid option: " + option)
-#         # except ValueError as e:
-#             # QMessageBox.critical(self, "Error", str(e))
-#         sys.exit()
-#
-#
-#     def csv_to_json(self, input_file_or_url):
-#         # try:
-#         with self.get_input_stream(input_file_or_url) as input_stream:
-#             csv_data = input_stream.read().decode("utf-8")
-#             json_data = json.dumps(list(csv.DictReader(csv_data.splitlines())))
-#
-#             options = QFileDialog.Options()
-#             file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON File", "", "JSON Files (*.json);;All Files (*)", options=options)
-#
-#             if file_path:
-#                 self.save_file(file_path, json_data)
-#         # except Exception as e:
-#         #     QMessageBox.critical(self, "Error", "Error converting CSV to JSON: " + str(e))
-#
-    # def json_to_csv(self, input_file_or_url):
-    #     try:
-    #         with self.get_input_stream(input_file_or_url) as input_stream:
-    #             json_data = json.load(input_stream)
-    #             csv_data = json_data[0].keys()  # Extract the field names
-    #
-    #             options = QFileDialog.Options()
-    #             file_path, _ = QFileDialog.getSaveFileName(
-    #                 self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
-    #
-    #             if file_path:
-    #                 with open(file_path, "w", newline="", encoding="utf-8") as csv_file:
-    #                     csv_writer = csv.DictWriter(csv_file, csv_data)
-    #                     csv_writer.writeheader()
-    #                     csv_writer.writerows(json_data)
-    #                 QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
-    #     except Exception as e:
-    #         QMessageBox.critical(self, "Error", "Error converting JSON to CSV: " + str(e))
-#
-#     def get_input_stream(self, input_file_or_url):
-#         if input_file_or_url.startswith("http") or input_file_or_url.startswith("https"):
-#             from urllib.request import urlopen
-#             return urlopen(input_file_or_url)
-#         else:
-#             return open(input_file_or_url, "rb")
-#
-# def save_file(file_type):
-#     options = QFileDialog.Options()
-#     file_path, _ = QFileDialog.getSaveFileName("Save " + file_type + " File", "", "", options=options)
-#     if file_path:
-#         try:
-#             with open(file_path, "w", encoding="utf-8") as file:
-#                 file.write(content)
-#             QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
-#         except Exception as e:
-#             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
-#
-
 def get_information_sections(file):
     try:
         with file as input_stream:
@@ -545,4 +438,33 @@ def process_calendar_file_csv(upload_file):
 
 def home(request):
     return render(request, 'calendario/homePage.html')
+
+def observeCalendar(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        uploaded_file = request.FILES['file']
+        if uploaded_file:
+            if uploaded_file.name.endswith('.csv'):
+                # Process the CSV file and get the necessary data
+                result = process_calendar_file_csv(uploaded_file)
+                
+                # Convert the result into a format suitable for the calendar
+                calendar_data = convert_result_to_calendar_format(result)
+
+                # Return the data as JSON
+                return JsonResponse({'calendarData': calendar_data})
+
+    return render(request, 'calendario/observeCalendar.html')
+
+def convert_result_to_calendar_format(result):
+    calendar_data = []
+
+    for item in result:
+        event = {
+            'title': f"{item['Curso']} - {item['Unidade de execução']}",
+            'start': f"{item['Dia']}T{item['Início']}",
+            'end': f"{item['Dia']}T{item['Fim']}",
+        }
+        calendar_data.append(event)
+
+    return calendar_data
 
