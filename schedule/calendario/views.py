@@ -301,12 +301,19 @@ def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_form
                         count += 1
                 '''
                 campo_1 = row[column1]
-                campo_2 = row[column2]
-                resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
-                print(resultado)
-                if resultado:
-                    count+=1
-                    classes_list.append(row)
+                if column2 is not None and operador_formula is not None:
+                    campo_2 = row[column2]
+                    resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
+                    print(resultado)
+                    if resultado:
+                        count+=1
+                        classes_list.append(row)
+                else:
+                    resultado = evaluate_expression(campo_1, None, None, sinal_formula, valor)
+                    print(resultado)
+                    if resultado:
+                        count += 1
+                        classes_list.append(row)
 
             except Exception as e:
                 print(e)
@@ -314,18 +321,21 @@ def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_form
 
 def evaluate_expression(operand1, operator, operand2, comparison_operator, value):
     operand1 = float(operand1)
-    operand2 = float(operand2)
+    if operand2 is not None and operator is not None:
+        operand2 = float(operand2)
 
-    if operator == '+':
-        result = operand1 + operand2
-    elif operator == '-':
-        result = operand1 - operand2
-    elif operator == '*':
-        result = operand1 * operand2
-    elif operator == '/':
-        result = operand1 / operand2
+        if operator == '+':
+            result = operand1 + operand2
+        elif operator == '-':
+            result = operand1 - operand2
+        elif operator == '*':
+            result = operand1 * operand2
+        elif operator == '/':
+            result = operand1 / operand2
+        else:
+            raise ValueError("Operador inválido.")
     else:
-        raise ValueError("Operador inválido.")
+        result = operand1
 
     if comparison_operator == '>':
         return result > value
@@ -405,14 +415,16 @@ def new_criteria(request):
                 break
 
         campos[1] = campos[1].rstrip('.')
+        valor = float(campos[1])
         print(sinal_formula)
         print(campos[0])
 
+        tem_operador = False
         for operador in operadores:
             if operador in campos[0]:
+                tem_operador = True
                 campo_1, campo_2 = campos[0].split(operador)
                 operador_formula = operador
-                valor=float(campos[1])
                 campo_1 = extrair_valores_em_aspas(campo_1)
                 campo_2 = extrair_valores_em_aspas(campo_2)
                 print(campo_1, campo_2, operador_formula, sinal_formula, valor)
@@ -420,6 +432,15 @@ def new_criteria(request):
                 column2 = find_columns(campo_2)
                 print(column1, column2)
                 break
+
+        if tem_operador == False:
+            campo_1 = campos[0]
+            campo_1 = extrair_valores_em_aspas(campo_1)
+            print(campo_1)
+            column1 = find_columns(campo_1)
+            print(column1)
+            column2 = None
+            operador_formula = None
 
             '''
             if campos and sinal:
@@ -440,7 +461,6 @@ def new_criteria(request):
             with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
                 file_to_read = csv_file.read()
             count, classes_list=aux_new_criteria(file_to_read, column1, column2, operador_formula, sinal_formula, valor)
-            print(count)
             return HttpResponse(f"Critério de qualidade pedido: {file_content}<br>"
                                 f"Número de aulas que correspondem ao critério: {count}<br><br><br>"
                                 f"Aulas que correspondem ao critério: <br>{classes_list}<br>")
