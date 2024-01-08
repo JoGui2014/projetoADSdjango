@@ -1,75 +1,37 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset='utf-8' />
-  <style>
-    #calendar {
-      max-width: 90%;
-      margin: 40px auto;
-      height: 680px;
-    }
-  </style>
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
-  <script src="https://cdn.jsdelivr.net/npm/csv-parser@2.3.3/csv-parser.min.js"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- Include jQuery for AJAX -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var calendarEl = document.getElementById('calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {
-        timeZone: 'UTC',
-        initialView: 'dayGridWeek',
-        headerToolbar: {
-          left: 'prev,next',
-          center: 'title',
-          right: 'dayGridWeek,dayGridDay'
-        },
-        editable: true,
-        eventSources: [
-          {
-            url: '{% url "observeCalendar" %}',  // Update this to the URL of your Django view
-            method: 'POST',
-            failure: function() {
-              alert('There was an error while fetching events!');
-            },
-            color: 'blue',
-            textColor: 'white',
-            events: function(info, successCallback, failureCallback) {
-              $.ajax({
-                type: 'POST',
-                url: '{% url "observeCalendar" %}',  // Update this to the URL of your Django view
-                data: new FormData($('#calendar-form')[0]),  // Assuming you have a form with id 'calendar-form'
-                processData: false,
-                contentType: false,
-                success: function(data) {
-                  success: function(data) {
-                  if (data.calendarData) {
-                    data.calendarData.forEach(function(eventData) {
-                      calendar.addEvent(eventData);
-                    });
-                  } else {
-                    alert('No calendar data received.');
-                    failureCallback();
-                  }
-                },
-                error: function() {
-                  alert('Error while fetching events.');
-                  failureCallback();
-                }
-              });
-            },
-          },
-        ],
-      });
-      calendar.render();
-    });
-  </script>
+    <!-- ... your head content ... -->
 </head>
 <body>
-  <form id="calendar-form" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="file" name="file" accept=".csv">
-    <input type="submit" value="Upload and Observe">
-  </form>
-  <div id='calendar'></div>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="file" accept=".csv">
+        <input type="submit" value="Upload and Observe">
+    </form>
+
+    <div id='calendar'></div>
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                timeZone: 'UTC',
+                initialView: 'dayGridWeek',
+                headerToolbar: {
+                    left: 'prev,next',
+                    center: 'title',
+                    right: 'dayGridWeek,dayGridDay'
+                },
+                editable: true,
+                events: {{ calendar_data|safe }},
+            });
+
+            calendar.render();
+        });
+    </script>
 </body>
 </html>
