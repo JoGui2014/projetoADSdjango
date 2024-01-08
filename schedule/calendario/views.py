@@ -285,86 +285,173 @@ def get_informations(request):
         return HttpResponse(str(e))
 
 
-def aux_new_criteria(csv_content):
-    global lotacao_index, inscritos_index
-
+def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_formula, valor):
+    classes_list = []
     csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
     count = 0
+    classes_list.append(csv_data[0])
 
     if csv_data:
         for row in csv_data[1:]:
             try:
+                '''
                 lotacao = int(row[lotacao_index])
                 inscritos = int(row[inscritos_index])
                 if isinstance(lotacao, int) and isinstance(inscritos, int):
                     if (inscritos - lotacao) > 0:
                         count += 1
+                '''
+                campo_1 = row[column1]
+                campo_2 = row[column2]
+                resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
+                print(resultado)
+                if resultado:
+                    count+=1
+                    classes_list.append(row)
+
             except Exception as e:
                 print(e)
-    return count
+    return count, classes_list
+
+def evaluate_expression(operand1, operator, operand2, comparison_operator, value):
+    operand1 = float(operand1)
+    operand2 = float(operand2)
+
+    if operator == '+':
+        result = operand1 + operand2
+    elif operator == '-':
+        result = operand1 - operand2
+    elif operator == '*':
+        result = operand1 * operand2
+    elif operator == '/':
+        result = operand1 / operand2
+    else:
+        raise ValueError("Operador inválido.")
+
+    if comparison_operator == '>':
+        return result > value
+    elif comparison_operator == '<':
+        return result < value
+    elif comparison_operator == '=':
+        return result == value
+    elif comparison_operator == '>=':
+        return result >= value
+    elif comparison_operator == '<=':
+        return result <= value
+    else:
+        raise ValueError("Operador de comparação inválido.")
+
+def extrair_valores_em_aspas(string):
+    padrao_aspas = re.compile(r'“([^”]*)”|"(.*?)"')
+    matches = padrao_aspas.findall(string)
+    strings_entre_aspas = [match[0] or match[1] for match in matches]
+    return strings_entre_aspas
+
+def find_columns(campo):
+    global curso_index
+    global unidade_execucao_index
+    global turno_index
+    global turma_index
+    global inscritos_index
+    global dia_semana_index
+    global inicio_index
+    global fim_index
+    global dia_index
+    global sala_expectavel
+    global sala_index
+    global lotacao_index
+    global sala_real
+
+
+    if "Curso" in campo:
+        return curso_index
+    if "Unidade" in campo or "Cadeira" in campo:
+        return unidade_execucao_index
+    if "Inscritos no turno" in campo:
+        return inscritos_index
+    if "Turno" in campo or "turno" in campo:
+        return turno_index
+    if "Turma" in campo:
+        return turma_index
+    if "Dia" in campo and "Semana" in campo:
+        return dia_semana_index
+    if "Início" in campo:
+        return inicio_index
+    if "Fim" in campo:
+        return fim_index
+    if "Dia" in campo and "Semana" not in campo:
+        return dia_index
+    if "Características" in campo and "pedida" in campo:
+        return sala_expectavel
+    if "Sala" in campo and "pedida" not in campo and "reais" not in campo:
+        return sala_index
+    if "Lotação" in campo:
+        return lotacao_index
+    if "Características" in campo and "reais" in campo:
+        return sala_real
 
 
 def new_criteria(request):
     if request.method == 'POST':
         file_content = request.FILES['input_txt_file'].read().decode('utf-8')
+
+        operadores = ['+', '-', '*', '/']
+        sinais = ['>', '<', '=', '>=', '<=']
+        campos, operador_formula, sinal_formula = None, None, None
+
+        for sinal in sinais:
+            if sinal in file_content:
+                campos = file_content.split(sinal)
+                sinal_formula = sinal
+                break
+
+        campos[1] = campos[1].rstrip('.')
+        print(sinal_formula)
+        print(campos[0])
+
+        for operador in operadores:
+            if operador in campos[0]:
+                campo_1, campo_2 = campos[0].split(operador)
+                operador_formula = operador
+                valor=float(campos[1])
+                campo_1 = extrair_valores_em_aspas(campo_1)
+                campo_2 = extrair_valores_em_aspas(campo_2)
+                print(campo_1, campo_2, operador_formula, sinal_formula, valor)
+                column1 = find_columns(campo_1)
+                column2 = find_columns(campo_2)
+                print(column1, column2)
+                break
+
+            '''
+            if campos and sinal:
+                if operador_formula and sinal_formula:
+                    campo_1, campo_2 = map(str.strip, campos)
+                    valor = float(valores[1])
+                elif sinal_formula and not(operador_formula):
+                    campo_1, campo_2 = map(str.strip, valores)
+
+                print(campo_1, campo_2, sinal_formula, operador_formula, valor)
+            else:
+                print(campos, sinal_formula, operador_formula, valor)
+                print("Não foi encontrada uma fórmula válida no ficheiro txt")
+            '''
+
         try:
             csv_file_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\HorarioDeExemplo.csv"
             with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
                 file_to_read = csv_file.read()
-            count=aux_new_criteria(file_to_read)
+            count, classes_list=aux_new_criteria(file_to_read, column1, column2, operador_formula, sinal_formula, valor)
             print(count)
             return HttpResponse(f"Critério de qualidade pedido: {file_content}<br>"
-                                f"Número de aulas que correspondem ao critério: {count}<br>")
+                                f"Número de aulas que correspondem ao critério: {count}<br><br><br>"
+                                f"Aulas que correspondem ao critério: <br>{classes_list}<br>")
 
         except Exception as e:
             return HttpResponse(f"Error reading CSV file")
-
-        formulas = file_content.split('\n')
-        for formula in formulas:
-            operadores = ['+', '-', '*', '/']
-            sinais = ['>', '<', '=', '>=', '<=']
-            campos, expressao = None, None
-
-            for operador in operadores:
-                if operador in formula:
-                    campos = formula.split(operador)
-                    operadorFormula = operador
-                    break
-
-            for sinal in sinais:
-                if sinal in formula:
-                    sinalFormula = sinal
-                    valores = formula.split(sinalFormula)
-
-            if campos and sinalFormula:
-                if operadorFormula and sinalFormula:
-                    campo_1, campo_2 = map(str.strip, campos)
-                    valor = float(valores[1])
-                elif sinalFormula and not(operadorFormula):
-                    campo_1, campo_2 = map(str.strip, valores)
-
-                Formula.objects.create(
-                    campo_1=campo_1,
-                    campo_2=campo_2,
-                    operador=operadorFormula,
-                    sinal=sinalFormula,
-                    valor=valor
-                )
-                print(campo_1, campo_2, sinalFormula, operadorFormula, valor)
-            else:
-                print(campos, sinalFormula, operadorFormula, valor)
-                print("Não foi encontrada uma fórmula válida no ficheiro txt")
-
-        csv_file_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\HorarioDeExemplo.csv"
-        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
-            csv_reader = csv.DictReader(csv_file, delimiter=';')
-            results = evaluate_formulas(csv_reader, Formula.objects.all())
-
-        # Passe os resultados para o contexto e renderize a página
-        context = {'results': results}
-        return render(request, 'calendario/observeCalendar.html', context)
-
+        
     return HttpResponse("Error uploading txt file")
+    '''
+    return HttpResponse("Ola")
 
 def evaluate_formulas(csv_reader, formulas):
     results = []
@@ -419,7 +506,7 @@ def observe_results(request):
     # Passe os resultados para o contexto e renderize a página
     context = {'results': results}
     return render(request, 'calendario/observeCalendar.html', context)
-'''
+
 
 def save_file(file_path, content):
     try:
