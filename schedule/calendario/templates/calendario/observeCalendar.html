@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>A inês e gay</title>
+    <title>Calendário</title>
 
 </head>
 <body>
@@ -13,5 +13,14 @@
         <input type="file" id="input_file" name="input_file"><br><br>
         <input type="submit" Value="Ver informações">
     </form>
+
+    <h1>Adicionar novo critério de qualidade</h1>
+    <form id="form_novo_criterio" action=" {% url 'calendario:new_criteria' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="input_txt_file">Select a txt file to import quality criteria:</label>
+        <input type="file" id="input_txt_file" name="input_txt_file"><br><br>
+        <input type="submit" Value="Submeter">
+    </form>
+
 </body>
 </html>

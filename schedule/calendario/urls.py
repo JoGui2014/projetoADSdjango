@@ -9,6 +9,7 @@ urlpatterns = [
     path('download_csv/<str:file_name>/', views.download_csv, name='download_csv'),
     path('download_json/<str:file_name>/', views.download_json, name='download_json'),
     path('informations/', views.get_informations, name='get_informations'),
+    path('new_criteria/', views.new_criteria, name='new_criteria'),
     path('class_rooms/', views.class_rooms, name='class_rooms'),
     path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
 

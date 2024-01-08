@@ -1,7 +1,6 @@
 from django.contrib.auth import authenticate, login
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render, redirect, get_object_or_404
-
 # Create your views here.
 
 import sys
@@ -11,6 +10,8 @@ import os
 from django.urls import reverse
 from django.http import JsonResponse
 from django.shortcuts import render
+from .models import Formula
+
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.db.models import Q
 from django.urls import reverse
@@ -19,6 +20,7 @@ from io import StringIO
 import os
 from django.conf import settings
 from django.http import FileResponse
+import re
 
 app_name = 'src'
 
@@ -214,7 +216,6 @@ def get_information_sections(file):
                             except ValueError as e:
                                 print(str(e))
                             total_aulas+=1
-                        print("olaolaola")
                     print(count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas)
                     return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
     except Exception as e:
@@ -283,12 +284,150 @@ def get_informations(request):
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
+
+def aux_new_criteria(csv_content):
+    global lotacao_index, inscritos_index
+
+    csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
+    count = 0
+
+    if csv_data:
+        for row in csv_data[1:]:
+            try:
+                lotacao = int(row[lotacao_index])
+                inscritos = int(row[inscritos_index])
+                if isinstance(lotacao, int) and isinstance(inscritos, int):
+                    if (inscritos - lotacao) > 0:
+                        count += 1
+            except Exception as e:
+                print(e)
+    return count
+
+
+def new_criteria(request):
+    if request.method == 'POST':
+        file_content = request.FILES['input_txt_file'].read().decode('utf-8')
+        try:
+            csv_file_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\HorarioDeExemplo.csv"
+            with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
+                file_to_read = csv_file.read()
+            count=aux_new_criteria(file_to_read)
+            print(count)
+            return HttpResponse(f"Critério de qualidade pedido: {file_content}<br>"
+                                f"Número de aulas que correspondem ao critério: {count}<br>")
+
+        except Exception as e:
+            return HttpResponse(f"Error reading CSV file")
+
+        formulas = file_content.split('\n')
+        for formula in formulas:
+            operadores = ['+', '-', '*', '/']
+            sinais = ['>', '<', '=', '>=', '<=']
+            campos, expressao = None, None
+
+            for operador in operadores:
+                if operador in formula:
+                    campos = formula.split(operador)
+                    operadorFormula = operador
+                    break
+
+            for sinal in sinais:
+                if sinal in formula:
+                    sinalFormula = sinal
+                    valores = formula.split(sinalFormula)
+
+            if campos and sinalFormula:
+                if operadorFormula and sinalFormula:
+                    campo_1, campo_2 = map(str.strip, campos)
+                    valor = float(valores[1])
+                elif sinalFormula and not(operadorFormula):
+                    campo_1, campo_2 = map(str.strip, valores)
+
+                Formula.objects.create(
+                    campo_1=campo_1,
+                    campo_2=campo_2,
+                    operador=operadorFormula,
+                    sinal=sinalFormula,
+                    valor=valor
+                )
+                print(campo_1, campo_2, sinalFormula, operadorFormula, valor)
+            else:
+                print(campos, sinalFormula, operadorFormula, valor)
+                print("Não foi encontrada uma fórmula válida no ficheiro txt")
+
+        csv_file_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\HorarioDeExemplo.csv"
+        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
+            csv_reader = csv.DictReader(csv_file, delimiter=';')
+            results = evaluate_formulas(csv_reader, Formula.objects.all())
+
+        # Passe os resultados para o contexto e renderize a página
+        context = {'results': results}
+        return render(request, 'calendario/observeCalendar.html', context)
+
+    return HttpResponse("Error uploading txt file")
+
+def evaluate_formulas(csv_reader, formulas):
+    results = []
+
+    # Itere sobre cada fórmula e aplique as condições ao arquivo CSV
+    for formula in formulas:
+        for row in csv_reader:
+            try:
+                # Avalie a fórmula dinamicamente para cada linha do CSV
+                condition_result = eval(formula.formula, row)
+
+                # Se a condição for verdadeira, adicione a linha aos resultados
+                if condition_result:
+                    results.append(row)
+            except Exception as e:
+                # Lide com exceções se a avaliação da fórmula falhar para uma linha específica
+                # print(f"Erro ao avaliar a fórmula para a linha {row}: {e}")
+                return
+
+    return results
+
+'''
+def observe_results(request):
+    # Recupere todas as instâncias do modelo Formula
+    formulas = Formula.objects.all()
+
+    # Crie um dicionário para armazenar os resultados
+    results = []
+
+    # Itere sobre cada fórmula e aplique as condições ao arquivo CSV
+    for formula in formulas:
+        # Assuma que o arquivo CSV está disponível em algum lugar, substitua pelo caminho real
+        csv_file_path = "schedule/calendario/static/HorarioDeExemplo.csv"
+
+        # Abra o arquivo CSV e leia as linhas
+        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
+            csv_reader = csv.DictReader(csv_file, delimiter=';')
+
+            # Aplique as condições da fórmula e filtre as linhas do CSV
+            for row in csv_reader:
+                try:
+                    # Avalie a fórmula dinamicamente para cada linha do CSV
+                    condition_result = eval(formula.formula, row)
+
+                    # Se a condição for verdadeira, adicione a linha aos resultados
+                    if condition_result:
+                        results.append(row)
+                except Exception as e:
+                    # Lide com exceções se a avaliação da fórmula falhar para uma linha específica
+                    print(f"Erro ao avaliar a fórmula para a linha {row}: {e}")
+
+    # Passe os resultados para o contexto e renderize a página
+    context = {'results': results}
+    return render(request, 'calendario/observeCalendar.html', context)
+'''
+
 def save_file(file_path, content):
     try:
         with open(file_path, "w", encoding="utf-8") as file:
             file.write(content)
         return file_path
     except Exception as e:
+        print(f"Error saving file: {e}")
         return None
 
 # def csv_to_json(uploaded_file):
@@ -377,6 +516,7 @@ def json_to_csv(input_data):
         csv_data = csv_buffer.getvalue()
 
         return csv_data
+
     except Exception as e:
         return str(e)
 
@@ -425,7 +565,7 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
+                    save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
 
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
@@ -433,19 +573,20 @@ def convertView(request):
                     if saved_file_path:
                         # If the file was successfully saved, return the download link
                         file_name = os.path.basename(saved_file_path)
-                        download_link = reverse('download_file', args=[file_name])
-                        return JsonResponse({"download_link": download_link})
+                        return JsonResponse({"download_link": saved_file_path})
+                        #download_link = reverse('download_file', args=[file_name])
+                        #return JsonResponse({"download_link": download_link})
                     else:
                         # Handle the case where the file couldn't be saved
                         return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                save_path = "C:\\Users\\guiva\\OneDrive\\Documents\\ISCTE\\Primeiro ano Mestrado ISCTE\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\ficheiroconvertidojson.csv"
-                success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
-
-                if success:
+                save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoCsv.csv"
+                #success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
+                result = json_to_csv(uploaded_file.read().decode("utf-8"))
+                if result:
                     # Save the CSV data using the save_file function
-                    saved_file_path = save_file(save_path, error)
+                    saved_file_path = save_file(save_path, result)
 
                     if saved_file_path:
                         # If the file was successfully saved, you can return a download link or message here
@@ -456,7 +597,7 @@ def convertView(request):
                         return JsonResponse({"error": "Failed to save the CSV file."})
                 else:
                     # Handle the case where the conversion or file saving failed
-                    return JsonResponse({"error": f"Conversion failed with the following error: {error}"})
+                    return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
     return render(request, 'calendario/homePage.html')
 
 def class_rooms(request):
