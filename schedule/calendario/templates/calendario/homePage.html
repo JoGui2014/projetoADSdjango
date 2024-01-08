@@ -28,9 +28,9 @@
     </form>
     <h1>Visualizar</h1>
     <form method="post" action="{% url 'calendario:observeCalendar' %}" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="file" name="file">
-    <input type="submit" value="Observe this Calendar">
-</form>
+        {% csrf_token %}
+        <input type="file" name="file">
+        <input type="submit" value="Observe this Calendar">
+    </form>
 </body>
  </html>

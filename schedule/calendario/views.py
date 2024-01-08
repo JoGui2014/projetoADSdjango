@@ -439,32 +439,60 @@ def process_calendar_file_csv(upload_file):
 def home(request):
     return render(request, 'calendario/homePage.html')
 
-def observeCalendar(request):
-    if request.method == 'POST' and 'file' in request.FILES:
-        uploaded_file = request.FILES['file']
-        if uploaded_file:
-            if uploaded_file.name.endswith('.csv'):
-                # Process the CSV file and get the necessary data
-                result = process_calendar_file_csv(uploaded_file)
-                
-                # Convert the result into a format suitable for the calendar
-                calendar_data = convert_result_to_calendar_format(result)
 
-                # Return the data as JSON
-                return JsonResponse({'calendarData': calendar_data})
+
+
+import csv
+from django.shortcuts import render
+from django.http import JsonResponse
+from .models import CalendarEvent
+
+import csv
+from django.http import JsonResponse
+from django.shortcuts import render
+from .models import CalendarEvent
+
+def observeCalendar(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+
+        # Process the CSV file and extract event data
+        event_data = process_csv(uploaded_file)
+
+        # Save the event data to the CalendarEvent model
+        save_event_data(event_data)
+
+        # Return the processed data as JSON response
+        return JsonResponse({'calendarData': event_data})
 
     return render(request, 'calendario/observeCalendar.html')
 
-def convert_result_to_calendar_format(result):
-    calendar_data = []
+def process_csv(file):
+    # Process the CSV file and return event data as a list of dictionaries
+    event_data = []
+    # Use utf-8-sig encoding to handle potential BOM (Byte Order Mark) in CSV
+    reader = csv.DictReader(file, encoding='utf-8-sig')
+    for row in reader:
+        # Assuming CSV columns are 'Curso', 'Dia da Semana', 'Início', 'Fim'
+        curso = row['Curso']
+        dia_semana = row['Dia da Semana']
+        inicio = row['Início']
+        fim = row['Fim']
 
-    for item in result:
-        event = {
-            'title': f"{item['Curso']} - {item['Unidade de execução']}",
-            'start': f"{item['Dia']}T{item['Início']}",
-            'end': f"{item['Dia']}T{item['Fim']}",
-        }
-        calendar_data.append(event)
+        event_data.append({
+            'curso': curso,
+            'dia_semana': dia_semana,
+            'inicio': inicio,
+            'fim': fim,
+        })
 
-    return calendar_data
+    return event_data
 
+def save_event_data(event_data):
+    # Save event data to the CalendarEvent model
+    for event in event_data:
+        CalendarEvent.objects.create(
+            title=event['curso'],  # Assuming 'curso' is the course name
+            start=event['inicio'],  # Assuming 'inicio' is the start time
+            end=event['fim'],  # Assuming 'fim' is the end time
+        )
