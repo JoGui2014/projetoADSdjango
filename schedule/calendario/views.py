@@ -10,7 +10,6 @@ import os
 from django.urls import reverse
 from django.http import JsonResponse
 from django.shortcuts import render
-from .models import Formula
 
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.db.models import Q
