@@ -35,6 +35,10 @@
                 },
                 events: [],  // Initialize with an empty array
                 editable: true,
+                eventClick: function (info) {
+                    alert('Event Information:\n\n' +
+                          'Title: ' + info.event.title + '\n' +);
+                }
             });
             fetch('/get_events/')  // Replace 'your_url_here' with the actual URL of your Django view
                 .then(response => response.json())

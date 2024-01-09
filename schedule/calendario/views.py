@@ -458,6 +458,8 @@ from django.http import JsonResponse
 def observeCalendar(request):
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
+        fs = FileSystemStorage(location=r"C:\Users\danie\PycharmProjects\projetoADSdjango\schedule\calendario\static")
+        filename = fs.save(uploaded_file.name, uploaded_file)
         print(uploaded_file)
         if uploaded_file and uploaded_file.name.endswith('.csv'):
             with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
