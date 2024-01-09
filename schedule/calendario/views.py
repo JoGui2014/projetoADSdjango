@@ -23,114 +23,6 @@ import re
 
 app_name = 'src'
 
-# def convertView(request):
-#     if request.method == 'POST':
-#         form = ArquivoForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             uploaded_file = form.cleaned_data['arquivo']
-#             app = appGUI()
-#             app.convert_button_clicked(uploaded_file)
-#     else:
-#         form = ArquivoForm()
-#     return render(request, 'homePage.html', {'form': form})
-
-# class AppGUI():
-#     def __init__(self):
-#         super().__init__()
-#         # self.initUI()
-#
-#     # def initUI(self):
-#     #     self.setWindowTitle("Calendar Tools")
-#     #     self.setFixedSize(400, 250)
-#     #
-#     #     central_widget = QWidget()
-#     #     self.setCentralWidget(central_widget)
-#     #
-#     #     self.layout = QVBoxLayout()
-#     #
-#     #     self.input_label = QLabel("Input File/URL:", self)
-#     #     self.layout.addWidget(self.input_label)
-#     #
-#     #     self.input_file_text = QLineEdit(self)
-#     #     self.layout.addWidget(self.input_file_text)
-#     #
-#     #     self.button_group = QButtonGroup(self)
-#     #
-#     #     self.convert_button = QPushButton("Convert", self)
-#     #     self.convert_button.clicked.connect(self.convert_button_clicked)
-#     #     self.layout.addWidget(self.convert_button)
-#     #
-#     def convert_button_clicked(self, input_file_or_url):
-#         # input_file_or_url = self.input_file_text.text()
-#         option = 2
-#
-#         if ".csv" in input_file_or_url:
-#             option = 1
-#
-#         # try:
-#         if option == 1:
-#             AppGUI.csv_to_json(input_file_or_url)
-#         elif option == 2:
-#             AppGUI.json_to_csv(input_file_or_url)
-#         # else:
-#                 # raise ValueError("Invalid option: " + option)
-#         # except ValueError as e:
-#             # QMessageBox.critical(self, "Error", str(e))
-#         sys.exit()
-#
-#
-#     def csv_to_json(self, input_file_or_url):
-#         # try:
-#         with self.get_input_stream(input_file_or_url) as input_stream:
-#             csv_data = input_stream.read().decode("utf-8")
-#             json_data = json.dumps(list(csv.DictReader(csv_data.splitlines())))
-#
-#             options = QFileDialog.Options()
-#             file_path, _ = QFileDialog.getSaveFileName(self, "Save JSON File", "", "JSON Files (*.json);;All Files (*)", options=options)
-#
-#             if file_path:
-#                 self.save_file(file_path, json_data)
-#         # except Exception as e:
-#         #     QMessageBox.critical(self, "Error", "Error converting CSV to JSON: " + str(e))
-#
-    # def json_to_csv(self, input_file_or_url):
-    #     try:
-    #         with self.get_input_stream(input_file_or_url) as input_stream:
-    #             json_data = json.load(input_stream)
-    #             csv_data = json_data[0].keys()  # Extract the field names
-    #
-    #             options = QFileDialog.Options()
-    #             file_path, _ = QFileDialog.getSaveFileName(
-    #                 self, "Save CSV File", "", "CSV Files (*.csv);;All Files (*)", options=options)
-    #
-    #             if file_path:
-    #                 with open(file_path, "w", newline="", encoding="utf-8") as csv_file:
-    #                     csv_writer = csv.DictWriter(csv_file, csv_data)
-    #                     csv_writer.writeheader()
-    #                     csv_writer.writerows(json_data)
-    #                 QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
-    #     except Exception as e:
-    #         QMessageBox.critical(self, "Error", "Error converting JSON to CSV: " + str(e))
-#
-#     def get_input_stream(self, input_file_or_url):
-#         if input_file_or_url.startswith("http") or input_file_or_url.startswith("https"):
-#             from urllib.request import urlopen
-#             return urlopen(input_file_or_url)
-#         else:
-#             return open(input_file_or_url, "rb")
-#
-# def save_file(file_type):
-#     options = QFileDialog.Options()
-#     file_path, _ = QFileDialog.getSaveFileName("Save " + file_type + " File", "", "", options=options)
-#     if file_path:
-#         try:
-#             with open(file_path, "w", encoding="utf-8") as file:
-#                 file.write(content)
-#             QMessageBox.information(self, "Success", "Successfully converted to: " + file_path)
-#         except Exception as e:
-#             QMessageBox.critical(self, "Error", "Error saving file: " + str(e))
-#
-
 def observeCalendar(request):
     global curso_index
     global unidade_execucao_index
@@ -175,6 +67,13 @@ def observeCalendar(request):
 
 def get_information_sections(file):
     global lotacao_index, inscritos_index, sala_index, sala_expectavel, sala_real
+    global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
+    salas_desperdicadas_list=[]
+    salas_sem_caracteristicas_list=[]
+    aulas_sobrelotadas_list=[]
+    aulas_com_sala_list=[]
+    aulas_sem_sala_list=[]
+
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
@@ -187,7 +86,7 @@ def get_information_sections(file):
                 if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1 and sala_expectavel!=-1 and sala_real!=-1:
                     count = 0
                     sum_students = 0
-                    aulas_sem_sala = 0
+                    aulas_com_sala = 0
                     total_aulas=0
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
@@ -205,18 +104,27 @@ def get_information_sections(file):
                                         csv_writer.writerow(row)
                                         count+=1
                                         sum_students+=(inscritos-lotacao)
+                                        aulas_sobrelotadas_list.append(row)
                                 sala = row[sala_index]
-                                aulas_sem_sala+=1
+                                aulas_com_sala+=1
+                                aulas_com_sala_list.append(row)
+
                                 tipo_de_sala_expectado = row[sala_expectavel]
                                 tipo_de_sala_real = row[sala_real]
                                 result = get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real)
-                                salas_desperdicadas+=result[0]
-                                salas_sem_caracteristicas+=result[1]
+                                if result[0]>0:
+                                    salas_desperdicadas+=result[0]
+                                    salas_desperdicadas_list.append(row)
+                                if result[1]>0:
+                                    salas_sem_caracteristicas+=result[1]
+                                    salas_sem_caracteristicas_list.append(row)
+                                if row not in aulas_com_sala_list:
+                                    aulas_sem_sala_list.append(row)
                             except ValueError as e:
                                 print(str(e))
                             total_aulas+=1
-                    print(count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas)
-                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
+                    print(count, sum_students, total_aulas-aulas_com_sala, salas_desperdicadas, salas_sem_caracteristicas)
+                    return count, sum_students, total_aulas-aulas_com_sala, salas_desperdicadas, salas_sem_caracteristicas
     except Exception as e:
         return print(str(e))
 
@@ -242,14 +150,11 @@ def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
         salas_desperdicadas+=1
     if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_desperdicadas+=1
-    # if salas_sem_caracteristicas!=0 or salas_desperdicadas!=0:
-    #     if (tipo_de_sala_expectado, tipo_de_sala_real) not in list:
-    #         list.append((tipo_de_sala_expectado, tipo_de_sala_real))
-    #         print(list[-1])
 
     return salas_desperdicadas, salas_sem_caracteristicas
 
 def get_informations(request):
+    global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
     if request.method == 'POST':
         file = request.FILES.get('input_file')
 
@@ -278,46 +183,43 @@ def get_informations(request):
             f"Número de alunos com aulas em sobrelotação: {sum_students}<br>"
             f"Número de aulas sem sala atribuída: {aulas_sem_sala}<br>"
             f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdicadas}<br>"
-            f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
+            f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}<br><br>"
+            f"Aulas desperdiçadas: {salas_desperdicadas_list}<br><br>"
+            f"Aulas sem características: {salas_sem_caracteristicas_list}<br><br>"
+            f"Aulas sobrelotadas: {aulas_sobrelotadas_list}<br><br>"
+            f"Aulas sem sala: {aulas_sem_sala_list}<br><br>"
         )
+    # Retirar listas!!!!!
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
 
 def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_formula, valor):
-    classes_list = []
+    global new_criteria_classes_list
+    new_criteria_classes_list = []
     csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
     count = 0
-    classes_list.append(csv_data[0])
+    new_criteria_classes_list.append(csv_data[0])
 
     if csv_data:
         for row in csv_data[1:]:
             try:
-                '''
-                lotacao = int(row[lotacao_index])
-                inscritos = int(row[inscritos_index])
-                if isinstance(lotacao, int) and isinstance(inscritos, int):
-                    if (inscritos - lotacao) > 0:
-                        count += 1
-                '''
                 campo_1 = row[column1]
                 if column2 is not None and operador_formula is not None:
                     campo_2 = row[column2]
                     resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
-                    print(resultado)
                     if resultado:
                         count+=1
-                        classes_list.append(row)
+                        new_criteria_classes_list.append(row)
                 else:
                     resultado = evaluate_expression(campo_1, None, None, sinal_formula, valor)
-                    print(resultado)
                     if resultado:
                         count += 1
-                        classes_list.append(row)
+                        new_criteria_classes_list.append(row)
 
             except Exception as e:
                 print(e)
-    return count, classes_list
+    return count, new_criteria_classes_list
 
 def evaluate_expression(operand1, operator, operand2, comparison_operator, value):
     operand1 = float(operand1)
@@ -416,8 +318,6 @@ def new_criteria(request):
 
         campos[1] = campos[1].rstrip('.')
         valor = float(campos[1])
-        print(sinal_formula)
-        print(campos[0])
 
         tem_operador = False
         for operador in operadores:
@@ -427,34 +327,16 @@ def new_criteria(request):
                 operador_formula = operador
                 campo_1 = extrair_valores_em_aspas(campo_1)
                 campo_2 = extrair_valores_em_aspas(campo_2)
-                print(campo_1, campo_2, operador_formula, sinal_formula, valor)
                 column1 = find_columns(campo_1)
                 column2 = find_columns(campo_2)
-                print(column1, column2)
                 break
 
         if tem_operador == False:
             campo_1 = campos[0]
             campo_1 = extrair_valores_em_aspas(campo_1)
-            print(campo_1)
             column1 = find_columns(campo_1)
-            print(column1)
             column2 = None
             operador_formula = None
-
-            '''
-            if campos and sinal:
-                if operador_formula and sinal_formula:
-                    campo_1, campo_2 = map(str.strip, campos)
-                    valor = float(valores[1])
-                elif sinal_formula and not(operador_formula):
-                    campo_1, campo_2 = map(str.strip, valores)
-
-                print(campo_1, campo_2, sinal_formula, operador_formula, valor)
-            else:
-                print(campos, sinal_formula, operador_formula, valor)
-                print("Não foi encontrada uma fórmula válida no ficheiro txt")
-            '''
 
         try:
             csv_file_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\HorarioDeExemplo.csv"
@@ -469,63 +351,6 @@ def new_criteria(request):
             return HttpResponse(f"Error reading CSV file")
         
     return HttpResponse("Error uploading txt file")
-    '''
-    return HttpResponse("Ola")
-
-def evaluate_formulas(csv_reader, formulas):
-    results = []
-
-    # Itere sobre cada fórmula e aplique as condições ao arquivo CSV
-    for formula in formulas:
-        for row in csv_reader:
-            try:
-                # Avalie a fórmula dinamicamente para cada linha do CSV
-                condition_result = eval(formula.formula, row)
-
-                # Se a condição for verdadeira, adicione a linha aos resultados
-                if condition_result:
-                    results.append(row)
-            except Exception as e:
-                # Lide com exceções se a avaliação da fórmula falhar para uma linha específica
-                # print(f"Erro ao avaliar a fórmula para a linha {row}: {e}")
-                return
-
-    return results
-
-'''
-def observe_results(request):
-    # Recupere todas as instâncias do modelo Formula
-    formulas = Formula.objects.all()
-
-    # Crie um dicionário para armazenar os resultados
-    results = []
-
-    # Itere sobre cada fórmula e aplique as condições ao arquivo CSV
-    for formula in formulas:
-        # Assuma que o arquivo CSV está disponível em algum lugar, substitua pelo caminho real
-        csv_file_path = "schedule/calendario/static/HorarioDeExemplo.csv"
-
-        # Abra o arquivo CSV e leia as linhas
-        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
-            csv_reader = csv.DictReader(csv_file, delimiter=';')
-
-            # Aplique as condições da fórmula e filtre as linhas do CSV
-            for row in csv_reader:
-                try:
-                    # Avalie a fórmula dinamicamente para cada linha do CSV
-                    condition_result = eval(formula.formula, row)
-
-                    # Se a condição for verdadeira, adicione a linha aos resultados
-                    if condition_result:
-                        results.append(row)
-                except Exception as e:
-                    # Lide com exceções se a avaliação da fórmula falhar para uma linha específica
-                    print(f"Erro ao avaliar a fórmula para a linha {row}: {e}")
-
-    # Passe os resultados para o contexto e renderize a página
-    context = {'results': results}
-    return render(request, 'calendario/observeCalendar.html', context)
-
 
 def save_file(file_path, content):
     try:
