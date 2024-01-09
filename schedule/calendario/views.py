@@ -1,8 +1,11 @@
 from django.contrib.auth import authenticate, login
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render, redirect, get_object_or_404
+
 # Create your views here.
 
+
+from django.http import JsonResponse
 import sys
 import json
 import csv
@@ -10,18 +13,20 @@ import os
 from django.urls import reverse
 from django.http import JsonResponse
 from django.shortcuts import render
-
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.db.models import Q
 from django.urls import reverse
 from django.core.checks import messages
-from io import StringIO
+from io import StringIO, TextIOWrapper
 import os
 from django.conf import settings
 from django.http import FileResponse
 import re
+from datetime import datetime
 
 app_name = 'src'
+global events_data
+events_data = []
 
 # def convertView(request):
 #     if request.method == 'POST':
@@ -174,7 +179,6 @@ def observeCalendar(request):
     return render(request, 'calendario/observeCalendar.html')
 
 def get_information_sections(file):
-    global lotacao_index, inscritos_index, sala_index, sala_expectavel, sala_real
     try:
         with file as input_stream:
             csv_data = input_stream.read().decode("utf-8")
@@ -182,8 +186,29 @@ def get_information_sections(file):
             header_row = csv_data[0]
 
             if csv_data:
-                salas_desperdicadas=0
+                lotacao_index = -1  # Initialize with an invalid index
+                inscritos_index = -1  # Initialize with an invalid index
+                # Vale a pena usar sala quando se pode usar as características???
+                sala_index=-1
+                sala_expectavel=-1
+                sala_real=-1
+                header_row = csv_data[0]
+                salas_desperdiçadas=0
                 salas_sem_caracteristicas=0
+
+                # Find the index of the columns dynamically
+                for index, column_name in enumerate(header_row):
+                    if "Lotação" in column_name:
+                        lotacao_index = index
+                    if "Inscritos no turno" in column_name:
+                        inscritos_index = index
+                    if "Sala da aula" in column_name:
+                        sala_index = index
+                    if "Características da sala pedida para a aula" in column_name:
+                        sala_expectavel = index
+                    if "Características reais da sala" in column_name:
+                        sala_real = index
+                #Separar???
                 if lotacao_index != -1 and inscritos_index != -1 and sala_index != -1 and sala_expectavel!=-1 and sala_real!=-1:
                     count = 0
                     sum_students = 0
@@ -210,44 +235,53 @@ def get_information_sections(file):
                                 tipo_de_sala_expectado = row[sala_expectavel]
                                 tipo_de_sala_real = row[sala_real]
                                 result = get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real)
-                                salas_desperdicadas+=result[0]
+                                salas_desperdiçadas+=result[0]
                                 salas_sem_caracteristicas+=result[1]
                             except ValueError as e:
-                                print(str(e))
+                                str(e)
                             total_aulas+=1
-                    print(count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas)
-                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
+                    #print(tipos_de_sala_1, tipos_de_sala_2)
+                    return count, sum_students, total_aulas-aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas
     except Exception as e:
-        return print(str(e))
+        return None
 
 def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
     salas_sem_caracteristicas=0
-    salas_desperdicadas=0
+    salas_desperdiçadas=0
     #list=[]
+    # Pedir Sala de Aulas e sair Arq???
     if "Arq" in tipo_de_sala_expectado.strip() and ("Arq" not in tipo_de_sala_real.strip() and "Computadores" not in tipo_de_sala_expectado.strip()):
         salas_sem_caracteristicas+=1
-    if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Aulas" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_expectado and "Computadores" not in tipo_de_sala_real.strip()):
-        salas_desperdicadas += 1
-    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+    if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Computadores" not in tipo_de_sala_real.strip()):
+        salas_desperdiçadas += 1
+    # if "Lab" in tipo_de_sala_expectado.strip() and (tipo_de_sala_expectado.strip() not in tipo_de_sala_real.strip()):
+    #     salas_sem_caracteristicas += 1
+    # if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()):
+    #     salas_desperdiçadas += 1
+    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdicadas += 1
-    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas += 1
+    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdicadas += 1
-    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+    # Se for de aulas???
+    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas += 1
+    #Videoconferencia????
+    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas+=1
-    if "videoconferencia" in tipo_de_sala_real and "videoconferencia" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdicadas+=1
-    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdicadas+=1
-    # if salas_sem_caracteristicas!=0 or salas_desperdicadas!=0:
+    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdiçadas+=1
+    # if ("Aulas" or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
+    #     salas_desperdiçadas+=1
+    # if ("Aulas" in tipo_de_sala_expectado or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
+    #     salas_sem_caracteristicas+=1
+    # if salas_sem_caracteristicas!=0 or salas_desperdiçadas!=0:
     #     if (tipo_de_sala_expectado, tipo_de_sala_real) not in list:
     #         list.append((tipo_de_sala_expectado, tipo_de_sala_real))
     #         print(list[-1])
-
-    return salas_desperdicadas, salas_sem_caracteristicas
+    #
+    return salas_desperdiçadas, salas_sem_caracteristicas
 
 def get_informations(request):
     if request.method == 'POST':
@@ -255,20 +289,18 @@ def get_informations(request):
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
-
     try:
         result = get_information_sections(file)
         if result is None:
-            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
-
-        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
+            return HttpResponse("An error occurred while processing the file.")
+        number, sum_students, aulas_sem_sala, salas_desperdiçadas, salas_sem_caracteristicas = result
         if number==0:
             return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
         if sum_students==0:
             return HttpResponse("Erro ao recolher número de alunos com aulas em sobrelotação.")
         if aulas_sem_sala==0:
             return HttpResponse("Erro ao recolher número de aulas sem sala atribuída.")
-        if salas_desperdicadas == 0:
+        if salas_desperdiçadas == 0:
             return HttpResponse("Erro ao recolher número de características desperdiçadas nas salas atribuídas às aulas.")
         if salas_sem_caracteristicas == 0:
             return HttpResponse("Erro ao recolher número de salas sem as características solicitadas pelo docente.")
@@ -277,8 +309,8 @@ def get_informations(request):
             f"Número de aulas em sobrelotação: {number}<br>"
             f"Número de alunos com aulas em sobrelotação: {sum_students}<br>"
             f"Número de aulas sem sala atribuída: {aulas_sem_sala}<br>"
-            f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdicadas}<br>"
-            f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
+           f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdiçadas}<br>"
+           f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}"
         )
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
@@ -467,7 +499,7 @@ def new_criteria(request):
 
         except Exception as e:
             return HttpResponse(f"Error reading CSV file")
-        
+
     return HttpResponse("Error uploading txt file")
     '''
     return HttpResponse("Ola")
@@ -622,7 +654,6 @@ def json_to_csv(input_data):
         csv_data = csv_buffer.getvalue()
 
         return csv_data
-
     except Exception as e:
         return str(e)
 
@@ -671,7 +702,7 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
+                    save_path = save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoJson.json"
 
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
@@ -679,20 +710,20 @@ def convertView(request):
                     if saved_file_path:
                         # If the file was successfully saved, return the download link
                         file_name = os.path.basename(saved_file_path)
-                        return JsonResponse({"download_link": saved_file_path})
-                        #download_link = reverse('download_file', args=[file_name])
-                        #return JsonResponse({"download_link": download_link})
+                        download_link = reverse('download_file', args=[file_name])
+                        return JsonResponse({"download_link": download_link})
                     else:
                         # Handle the case where the file couldn't be saved
                         return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
+
                 save_path = "C:\\Users\\inesc\\OneDrive - ISCTE-IUL\\Documentos\\Iscte\\Mestrado\\ADS\\projetoADSdjango\\schedule\\calendario\\static\\FicheiroConvertidoCsv.csv"
                 #success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
                 if result:
                     # Save the CSV data using the save_file function
-                    saved_file_path = save_file(save_path, result)
+                    saved_file_path = save_file(save_path, error)
 
                     if saved_file_path:
                         # If the file was successfully saved, you can return a download link or message here
@@ -703,7 +734,7 @@ def convertView(request):
                         return JsonResponse({"error": "Failed to save the CSV file."})
                 else:
                     # Handle the case where the conversion or file saving failed
-                    return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
+                    return JsonResponse({"error": f"Conversion failed with the following error: {error}"})
     return render(request, 'calendario/homePage.html')
 
 def class_rooms(request):
@@ -770,5 +801,109 @@ def class_rooms(request):
 #                     # Handle the case where the conversion or file saving failed
 #                     return HttpResponse(f"Conversion failed with the following error: {error}")
 
+
+def observeCalendar(request):
+    if request.method == 'POST':
+        uploaded_file = request.FILES['file']
+        if uploaded_file:
+            fs = FileSystemStorage()
+            fs.save(uploaded_file.name, uploaded_file)
+
+    return render(request, 'calendario/observeCalendar.html')
+
 def home(request):
     return render(request, 'calendario/homePage.html')
+
+""" def observeCalendar(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        uploaded_file = request.FILES['file']
+        if uploaded_file and uploaded_file.name.endswith('.csv'):
+            events = process_csv_to_events(uploaded_file)
+            events_json = json.dumps(events)
+            return render(request, 'calendario/observeCalendar.html', {'events_json': events_json})
+    
+    return render(request, 'calendario/observeCalendar.html') """
+
+import json
+from django.http import JsonResponse
+
+def observeCalendar(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        uploaded_file = request.FILES['file']
+        print(uploaded_file)
+        if uploaded_file and uploaded_file.name.endswith('.csv'):
+            with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
+                csv_reader = csv.DictReader(file, delimiter=';')
+                data = [row for row in csv_reader]
+            events = process_csv_to_events(data)
+            events_data = [
+                {
+                    'title': event['title'],
+                    'start': event['start_time'],
+                    'end': event['end_time'],
+                }
+                for event in events
+            ]
+            #events_json = json.dumps(events)
+
+            return render(request, 'calendario/observeCalendar.html', {'events_json': events_data})
+
+    return render(request, 'calendario/observeCalendar.html')
+
+import os
+
+def get_events(request):
+    # Replace with the absolute path to your CSV file
+    file_path = r"C:\Users\guiva\OneDrive\Documents\ISCTE\Primeiro ano Mestrado ISCTE\ADS\adsSegundaFase\projetoADSdjango\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
+    if file_path.endswith('.csv'):
+        with open(file_path, 'r', encoding="UTF-8") as file:
+            csv_reader = csv.DictReader(file, delimiter=';')
+            data = [row for row in csv_reader]
+        events = process_csv_to_events(data)
+        events_data = [
+            {
+                'title': event['title'],
+                'start': event['start_time'],
+                'end': event['end_time'],
+            }
+            for event in events
+        ]
+        return JsonResponse({'events_json': events_data}, safe=False)
+
+    return JsonResponse({'error': 'Invalid file or file not found'}, status=400)
+
+
+def process_csv_to_events(data):
+    events = []
+
+    # Read CSV data and extract relevant information
+    for row in data:
+        # Extract fields from the CSV row
+        title = f"{row['Curso']} - {row['Unidade de execução']}"
+        start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
+        end_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
+
+        # Create event object and add to the events list
+        event = {
+            'title': title,
+            'start_time': start_time,
+            'end_time': end_time,
+            # Add other event details as needed
+        }
+        events.append(event)
+    return events
+
+def convert_to_iso_format(datetime_str):
+    components = datetime_str.split(';')
+
+    # Check if both day and time components are present
+    if len(components) == 2 and components[0] and components[1]:
+        dia = components[0]
+        hora = components[1]
+        final = f"{dia.split('/')[2]}-{dia.split('/')[1]}-{dia.split('/')[0]}T{hora}"
+        return final
+    else:
+        # Handle the case when either day or time is missing
+        # You might want to customize this part based on your requirements
+        print("Invalid date/time format:", datetime_str)
+        return "2024-00-00T00:00:00"

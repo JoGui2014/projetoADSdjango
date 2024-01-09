@@ -12,5 +12,5 @@ urlpatterns = [
     path('new_criteria/', views.new_criteria, name='new_criteria'),
     path('class_rooms/', views.class_rooms, name='class_rooms'),
     path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
-
+    path('get_events/', views.get_events, name='get_events'),
 ]
