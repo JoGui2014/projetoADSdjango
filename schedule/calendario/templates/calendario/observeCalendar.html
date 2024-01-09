@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <title>Calendário</title>
@@ -11,6 +11,7 @@
             font-size: 14px;
         }
         #calendar {
+            language: pt;
             max-width: 1100px;
             margin: 40px auto;
         }
@@ -21,7 +22,7 @@
    <h1>Critérios de qualidade</h1>
     <form id="form_criterios_qualidade" action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="input_file">Select a file to see informations of the classes:</label>
+        <label for="input_file">Selecione um ficheiro para ver os seus critérios de qualidade:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
         <input type="submit" Value="Ver informações">
     </form>
@@ -29,7 +30,7 @@
     <h1>Adicionar novo critério de qualidade</h1>
     <form id="form_novo_criterio" action=" {% url 'calendario:new_criteria' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="input_txt_file">Select a txt file to import quality criteria:</label>
+        <label for="input_txt_file">Selecione um ficheiro txt com o novo critério de qualidade:</label>
         <input type="file" id="input_txt_file" name="input_txt_file"><br><br>
         <input type="submit" Value="Submeter">
     </form>
@@ -50,6 +51,11 @@
                 },
                 events: [],  // Initialize with an empty array
                 editable: true,
+                eventClick: function (info) {
+                    alert('Informação: \n' +
+                          'Aula: ' + info.event.title + '\n' +
+                          'Critério de Qualidade: ' + info.event.extendedProps.quality)
+                }
             });
             fetch('/get_events/')  // Replace 'your_url_here' with the actual URL of your Django view
                 .then(response => response.json())
