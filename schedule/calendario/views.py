@@ -21,8 +21,11 @@ from io import StringIO, TextIOWrapper
 import os
 from django.conf import settings
 from django.http import FileResponse
+from datetime import datetime
 
 app_name = 'src'
+global events_data
+events_data = []
 def get_information_sections(file):
     try:
         with file as input_stream:
@@ -401,7 +404,7 @@ def class_rooms(request):
 #                     return HttpResponse(f"Conversion failed with the following error: {error}")
 
 
-def observeCalendar(request):
+""" def observeCalendar(request):
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
         if uploaded_file:
@@ -414,9 +417,9 @@ def observeCalendar(request):
             fs = FileSystemStorage()
             fs.save(uploaded_file.name, uploaded_file)
 
-    return render(request, 'calendario/observeCalendar.html')
+    return render(request, 'calendario/observeCalendar.html') """
 
-def process_calendar_file_csv(upload_file):
+""" def process_calendar_file_csv(upload_file):
     data = upload_file.read().decode("utf-8").splitlines()
 
     # Get the header row and the data rows
@@ -434,65 +437,101 @@ def process_calendar_file_csv(upload_file):
         for i, field_name in enumerate(field_names):
             item[field_name] = values[i]
         result.append(item)
-    return result
+    return result """
 
 def home(request):
     return render(request, 'calendario/homePage.html')
 
+""" def observeCalendar(request):
+    if request.method == 'POST' and 'file' in request.FILES:
+        uploaded_file = request.FILES['file']
+        if uploaded_file and uploaded_file.name.endswith('.csv'):
+            events = process_csv_to_events(uploaded_file)
+            events_json = json.dumps(events)
+            return render(request, 'calendario/observeCalendar.html', {'events_json': events_json})
+    
+    return render(request, 'calendario/observeCalendar.html') """
 
-
-
-import csv
-from django.shortcuts import render
+import json
 from django.http import JsonResponse
-from .models import CalendarEvent
-
-import csv
-from django.http import JsonResponse
-from django.shortcuts import render
-from .models import CalendarEvent
 
 def observeCalendar(request):
-    if request.method == 'POST' and request.FILES.get('file'):
+    if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
-
-        # Process the CSV file and extract event data
-        event_data = process_csv(uploaded_file)
-
-        # Save the event data to the CalendarEvent model
-        save_event_data(event_data)
-
-        # Return the processed data as JSON response
-        return JsonResponse({'calendarData': event_data})
-
+        print(uploaded_file)
+        if uploaded_file and uploaded_file.name.endswith('.csv'):
+            with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
+                csv_reader = csv.DictReader(file, delimiter=';')
+                data = [row for row in csv_reader]
+            events = process_csv_to_events(data)
+            events_data = [
+                {
+                    'title': event['title'],
+                    'start': event['start_time'],
+                    'end': event['end_time'],
+                }
+                for event in events
+            ]
+            #events_json = json.dumps(events)
+            
+            return render(request, 'calendario/observeCalendar.html', {'events_json': events_data})
+    
     return render(request, 'calendario/observeCalendar.html')
 
-def process_csv(file):
-    # Process the CSV file and return event data as a list of dictionaries
-    event_data = []
-    # Use utf-8-sig encoding to handle potential BOM (Byte Order Mark) in CSV
-    reader = csv.DictReader(file, encoding='utf-8-sig')
-    for row in reader:
-        # Assuming CSV columns are 'Curso', 'Dia da Semana', 'Início', 'Fim'
-        curso = row['Curso']
-        dia_semana = row['Dia da Semana']
-        inicio = row['Início']
-        fim = row['Fim']
+import os
 
-        event_data.append({
-            'curso': curso,
-            'dia_semana': dia_semana,
-            'inicio': inicio,
-            'fim': fim,
-        })
+def get_events(request):
+    # Replace with the absolute path to your CSV file
+    file_path = r"C:\Users\guiva\OneDrive\Documents\ISCTE\Primeiro ano Mestrado ISCTE\ADS\adsSegundaFase\projetoADSdjango\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
+    if file_path.endswith('.csv'):
+        with open(file_path, 'r', encoding="UTF-8") as file:
+            csv_reader = csv.DictReader(file, delimiter=';')
+            data = [row for row in csv_reader]
+        events = process_csv_to_events(data)
+        events_data = [
+            {
+                'title': event['title'],
+                'start': event['start_time'],
+                'end': event['end_time'],
+            }
+            for event in events
+        ]
+        return JsonResponse({'events_json': events_data}, safe=False)
 
-    return event_data
+    return JsonResponse({'error': 'Invalid file or file not found'}, status=400)
 
-def save_event_data(event_data):
-    # Save event data to the CalendarEvent model
-    for event in event_data:
-        CalendarEvent.objects.create(
-            title=event['curso'],  # Assuming 'curso' is the course name
-            start=event['inicio'],  # Assuming 'inicio' is the start time
-            end=event['fim'],  # Assuming 'fim' is the end time
-        )
+
+def process_csv_to_events(data):
+    events = []
+
+    # Read CSV data and extract relevant information
+    for row in data:
+        # Extract fields from the CSV row
+        title = f"{row['Curso']} - {row['Unidade de execução']}"
+        start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
+        end_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
+
+        # Create event object and add to the events list
+        event = {
+            'title': title,
+            'start_time': start_time,
+            'end_time': end_time,
+            # Add other event details as needed
+        }
+        events.append(event)
+    return events
+
+def convert_to_iso_format(datetime_str):
+    components = datetime_str.split(';')
+    
+    # Check if both day and time components are present
+    if len(components) == 2 and components[0] and components[1]:
+        dia = components[0]
+        hora = components[1]
+        final = f"{dia.split('/')[2]}-{dia.split('/')[1]}-{dia.split('/')[0]}T{hora}"
+        return final
+    else:
+        # Handle the case when either day or time is missing
+        # You might want to customize this part based on your requirements
+        print("Invalid date/time format:", datetime_str)
+        return "2024-00-00T00:00:00"
