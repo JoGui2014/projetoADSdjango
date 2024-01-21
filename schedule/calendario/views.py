@@ -54,7 +54,7 @@ def get_information_sections(file):
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
 
-                    save_path = r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\ProjetoADSDjango\schedule\calendario\static\overpopulated_classes.csv"
+                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\overpopulated_classes.csv"
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow(header_row)
@@ -86,7 +86,6 @@ def get_information_sections(file):
                             except ValueError as e:
                                 print(str(e))
                             total_aulas+=1
-                    print(count, sum_students, total_aulas-aulas_com_sala, salas_desperdicadas, salas_sem_caracteristicas)
                     return count, sum_students, total_aulas-aulas_com_sala, salas_desperdicadas, salas_sem_caracteristicas
     except Exception as e:
         return print(str(e))
@@ -118,15 +117,6 @@ def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
         salas_sem_caracteristicas+=1
     if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
         salas_desperdiçadas+=1
-    # if ("Aulas" or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
-    #     salas_desperdiçadas+=1
-    # if ("Aulas" in tipo_de_sala_expectado or "aulas" in tipo_de_sala_expectado) and "aulas" not in tipo_de_sala_real:
-    #     salas_sem_caracteristicas+=1
-    # if salas_sem_caracteristicas!=0 or salas_desperdiçadas!=0:
-    #     if (tipo_de_sala_expectado, tipo_de_sala_real) not in list:
-    #         list.append((tipo_de_sala_expectado, tipo_de_sala_real))
-    #         print(list[-1])
-    #
     return salas_desperdiçadas, salas_sem_caracteristicas
 
 def get_informations(request):
@@ -321,7 +311,7 @@ def new_criteria(request):
             operador_formula = None
 
         try:
-            csv_file_path = r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\ProjetoADSDjango\schedule\calendario\static\HorarioDeExemplo.csv"
+            csv_file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
             with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
                 file_to_read = csv_file.read()
             count, classes_list=aux_new_criteria(file_to_read, column1, column2, operador_formula, sinal_formula, valor)
@@ -420,7 +410,7 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    save_path = "C:\\Users\\Nicole\\OneDrive - ISCTE-IUL\\1ºAno Mestrado\\1ºSemestre\\ADS\\FicheiroConvertidoJson.json"
+                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoJson.json"
 
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
@@ -437,7 +427,7 @@ def convertView(request):
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
 
-                save_path = r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\FicheiroConvertidoCsv.csv"
+                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoCsv.csv"
                 #success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
                 if result:
@@ -462,7 +452,7 @@ def class_rooms(request):
 
     if not file.name.endswith('.csv'):
         return HttpResponse("Please upload a valid CSV file")
-    save_path = r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\ProjetoADSDjango\schedule\calendario\static\CaracterizaçãoDasSalas.csv"
+    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\CaracterizaçãoDasSalas.csv"
     try:
         file_content = file.read().decode("utf-8")
         saved_file_path = save_file(save_path, file_content)
@@ -502,9 +492,9 @@ def observeCalendar(request):
 
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
-        fs = FileSystemStorage(location=r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\ProjetoADSDjango\schedule\calendario\static")
+        fs = FileSystemStorage(location=r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static")
         filename = fs.save(uploaded_file.name, uploaded_file)
-        print(uploaded_file)
+        #print(uploaded_file)
 
         try:
             curso_index = int(request.POST.get('curso_index'))
@@ -539,7 +529,6 @@ def observeCalendar(request):
                 for event in events
             ]
             #events_json = json.dumps(events)
-
             return render(request, 'calendario/observeCalendar.html', {'events_json': events_data})
 
     return render(request, 'calendario/observeCalendar.html')
@@ -549,7 +538,7 @@ import os
 def get_events(request):
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
     # Replace with the absolute path to your CSV file
-    file_path = r"C:\Users\Nicole\OneDrive - ISCTE-IUL\1ºAno Mestrado\1ºSemestre\ADS\ProjetoADSDjango\schedule\calendario\static\HorarioDeExemplo.csv"
+    file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
     if file_path.endswith('.csv'):
         with open(file_path, 'r', encoding="UTF-8") as file:
             csv_reader = csv.DictReader(file, delimiter=';')
@@ -564,7 +553,7 @@ def get_events(request):
             }
             for event in events
         ]
-        print(events_data)
+        #print(events_data)
         return JsonResponse({'events_json': events_data}, safe=False)
 
     return JsonResponse({'error': 'Invalid file or file not found'}, status=400)
