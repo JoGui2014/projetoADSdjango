@@ -387,36 +387,46 @@ def class_rooms(request):
         if not class_rooms_file.name.endswith('.csv') or not classes_file.name.endswith('.csv'):
             return HttpResponse("Please upload valid CSV files")
 
-        create_schedule(class_rooms_file, classes_file)
+        with class_rooms_file as class_rooms_input:
+            class_rooms_csv_data = class_rooms_input.read().decode("utf-8")
+            class_rooms_csv_data = [line.split(';') for line in class_rooms_csv_data.split('\n') if line]
+
+        with classes_file as input_stream:
+            csv_data = input_stream.read().decode("utf-8")
+            csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
+            header_row = csv_data[0]
+
+            if csv_data and class_rooms_csv_data:
+                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
+                with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(header_row)
+                    for row in csv_data[1:]:
+                        try:
+                            row_without_last_three_columns = row[:-3]  # Remover as últimas três colunas de cada linha
+
+                            # Tenta encontrar uma sala disponível no arquivo de salas
+                            available_room = find_available_room(class_rooms_csv_data, row)
+
+                            # Se encontrar uma sala disponível, adiciona à linha de dados
+                            if available_room:
+                                row_without_last_three_columns.extend(available_room)
+
+                            csv_writer.writerow(row_without_last_three_columns)
+                        except ValueError as e:
+                                print(str(e))
 
     return render(request, 'calendario/homePage.html')
+
+
+def find_available_room(class_rooms_csv_data, row):
+ return
+
 
 def save_file(save_path, file_content):
     with open(save_path, 'w', encoding='utf-8') as file:
         file.write(file_content)
     return save_path
-
-def create_schedule(class_rooms_file, classes_file):
-    save_path_class_rooms = os.path.join(
-        r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static",
-        "CaracterizaçãoDasSalas.csv"
-    )
-    save_path_classes_file = os.path.join(
-        r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static", "HorarioNovo.csv"
-    )
-
-    with open(classes_file, 'r', newline='', encoding='utf-8') as original_file:
-        csv_reader = csv.reader(original_file)
-        lines = list(csv_reader)
-
-    # Remoção dos dados das últimas 3 colunas, exceto o cabeçalho
-    for line in lines[1:]:
-        del line[-3:]
-
-    # Escrita do novo conteúdo em um novo arquivo
-    with open(save_path_classes_file, 'w', newline='', encoding='utf-8') as new_file:
-        csv_writer = csv.writer(new_file)
-        csv_writer.writerows(lines)
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -525,7 +535,8 @@ def process_csv_to_events(data):
     for row in data:
         # Extract fields from the CSV row
         #print(row)
-        title = "{row[r'\ufeffCurso']} - {row['Unidade de execução']}"
+        #title = f"{row[r'\\ufeffCurso']} - {row['Unidade de execução']}"
+        title = "{} - {}".format(row.get(r'\ufeffCurso', ''), row.get('Unidade de execução', ''))
         start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
         end_time = convert_to_iso_format(f"{row['Dia']};{row['Fim']}")
         quality = False
