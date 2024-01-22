@@ -1,0 +1,111 @@
+<!-- templates/calculator.html -->
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+<head>
+    <title>Verificar novo critério de qualidade</title>
+</head>
+<body>
+    <h2>Adicionar fórmula para verificar critério de qualidade:</h2>
+
+    <form id="calculatorForm" onsubmit="interceptarEnvioFormulario(event)">
+        <input type="text" id="formulaInput" readonly style="width: 500px;">
+        <br><br>
+        <p>Colunas do ficheiro csv:<br>
+        <button type="button" onclick="appendToFormula('Curso')">Curso</button>
+        <button type="button" onclick="appendToFormula('Unidade')">Unidade de Execução</button>
+        <button type="button" onclick="appendToFormula('Turno')">Turno</button>
+        <button type="button" onclick="appendToFormula('Turma')">Turma</button>
+        <button type="button" onclick="appendToFormula('Inscritos')">Inscritos no turno</button>
+        <button type="button" onclick="appendToFormula('Dia_Da_Semana')">Dia da semana</button>
+        <button type="button" onclick="appendToFormula('Início')">Início</button>
+        <button type="button" onclick="appendToFormula('Fim')">Fim</button>
+        <button type="button" onclick="appendToFormula('Dia_Do_Ano')">Dia</button>
+        <button type="button" onclick="appendToFormula('Características_pedidas')">Características da sala pedida para a aula</button>
+        <button type="button" onclick="appendToFormula('Sala')">Sala da aula</button>
+        <button type="button" onclick="appendToFormula('Lotação')">Lotação</button>
+        <button type="button" onclick="appendToFormula('Características_reais')">Características reais da sala</button></p>
+
+        <p>Operadores:<br>
+        <button type="button" onclick="appendToFormula('+')">+</button>
+        <button type="button" onclick="appendToFormula('-')">-</button>
+        <button type="button" onclick="appendToFormula('*')">*</button>
+        <button type="button" onclick="appendToFormula('/')">/</button>
+        </p>
+        <p>Sinais:<br>
+        <button type="button" onclick="appendToFormula('>')">></button>
+        <button type="button" onclick="appendToFormula('<')"><</button>
+        <button type="button" onclick="appendToFormula('>=')">>=</button>
+        <button type="button" onclick="appendToFormula('<=')"><=</button>
+        <button type="button" onclick="appendToFormula('==')">=</button>
+        <button type="button" onclick="appendToFormula('!=')">!=</button>
+        </p>
+        <p>Parênteses:<br>
+        <button type="button" onclick="appendToFormula('(')">(</button>
+        <button type="button" onclick="appendToFormula(')')">)</button>
+        </p>
+        <p>Inserir valor (Número ou String):</p>
+        <input type="text" id="valorInput" placeholder="Insira um valor" style="width: 300px;">
+        <button type="button" onclick="adicionarValor()">Adicionar</button>
+        <br><br><br>
+        <button type="button" onclick="limparFormula()">Limpar</button>
+        <button type="submit">Calcular</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        function interceptarEnvioFormulario(event) {
+            event.preventDefault();
+            calcularExpressao();
+        }
+
+        function adicionarValor() {
+            var inputElement = document.getElementById('valorInput');
+            var valor = inputElement.value;
+
+            // Verificar se é um número
+            if (!isNaN(parseFloat(valor)) && isFinite(valor)) {
+                // Se for um número, adicionar sem aspas
+                appendToFormula(valor);
+            } else {
+                // Se for uma string, adicionar com aspas
+                appendToFormula('"' + valor + '"');
+            }
+
+            inputElement.value = '';
+        }
+
+        function appendToFormula(value) {
+            var formulaInput = document.getElementById('formulaInput');
+            formulaInput.value += value;
+        }
+
+        function obterExpressao() {
+            return document.getElementById('formulaInput').value;
+        }
+
+        function limparFormula() {
+            var formulaInput = document.getElementById('formulaInput');
+            formulaInput.value = '';
+            // Limpar a div de resultado
+            document.getElementById('result').innerHTML = '';
+        }
+
+        function calcularExpressao() {
+            var expressao = obterExpressao();
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/calcular-expressao/', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function () {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    document.getElementById('result').innerHTML = 'O número de linhas correspondentes é: ' + xhr.responseText;
+                } else {
+                    console.error('Erro ao enviar a expressão para o backend.');
+                }
+            };
+            xhr.send('expressao=' + encodeURIComponent(expressao));
+        }
+    </script>
+</body>
+</html>

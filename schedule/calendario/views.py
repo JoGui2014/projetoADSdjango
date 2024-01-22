@@ -159,71 +159,52 @@ def get_informations(request):
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
-def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_formula, valor):
-    classes_list = []
-    csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
-    count = 0
-    classes_list.append(csv_data[0])
+def aux_new_criteria(expressao):
+    try:
+        csv_file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
+        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
+            csv_content = csv_file.read()
+        classes_list = []
+        csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
+        count = 0
+        classes_list.append(csv_data[0])
 
-    if csv_data:
-        for row in csv_data[1:]:
-            try:
-                campo_1 = row[column1]
-                if column2 is not None and operador_formula is not None:
-                    campo_2 = row[column2]
-                    resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
-                    print(resultado)
-                    if resultado:
-                        count+=1
-                        classes_list.append(row)
-                else:
-                    resultado = evaluate_expression(campo_1, None, None, sinal_formula, valor)
-                    print(resultado)
-                    if resultado:
+        if csv_data:
+            for row in csv_data[1:]:
+                try:
+                    # Construir código dinâmico
+                    code = f"expression_result = {expressao}"
+                    local_vars = {'row': row,
+                                  'Curso': (row[curso_index]) if 'Curso' in expressao else None,
+                                  'Unidade': (row[unidade_execucao_index]) if 'Unidade' in expressao else None,
+                                  'Turno': (row[turno_index]) if 'Turno' in expressao else None,
+                                  'Turma': (row[turma_index]) if 'Turma' in expressao else None,
+                                  'Inscritos': int(row[inscritos_index]) if 'Inscritos' in expressao else None,
+                                  'Dia_Da_Semana': (row[dia_semana_index]) if 'Dia_Da_Semana' in expressao else None,
+                                  'Início': (row[inicio_index]) if 'Início' in expressao else None,
+                                  'Fim': (row[fim_index]) if 'Fim' in expressao else None,
+                                  'Dia_Do_Ano': (row[dia_index]) if 'Dia_Do_Ano' in expressao else None,
+                                  'Características_pedidas': (row[sala_expectavel]) if 'Características_pedidas' in expressao else None,
+                                  'Sala': (row[sala_index]) if 'Sala' in expressao else None,
+                                  'Lotação': int(row[lotacao_index]) if 'Lotação' in expressao else None,
+                                  'Características_reais': (row[sala_real]) if 'Características_reais' in expressao else None,
+                                  }
+
+                    # Executar código dinâmico
+                    exec(code, globals(), local_vars)
+                    expression_result = local_vars['expression_result']
+
+                    if expression_result:
                         count += 1
                         classes_list.append(row)
+                        print(f'Expressão Avaliada: {expressao}')
+                except Exception as e:
+                    print(e)
+        return count, classes_list
+    except Exception as e:
+        return HttpResponse('Expressão inválida.')
 
-            except Exception as e:
-                print(e)
-    return count, classes_list
-
-def evaluate_expression(operand1, operator, operand2, comparison_operator, value):
-    operand1 = float(operand1)
-    if operand2 is not None and operator is not None:
-        operand2 = float(operand2)
-
-        if operator == '+':
-            result = operand1 + operand2
-        elif operator == '-':
-            result = operand1 - operand2
-        elif operator == '*':
-            result = operand1 * operand2
-        elif operator == '/':
-            result = operand1 / operand2
-        else:
-            raise ValueError("Operador inválido.")
-    else:
-        result = operand1
-
-    if comparison_operator == '>':
-        return result > value
-    elif comparison_operator == '<':
-        return result < value
-    elif comparison_operator == '=':
-        return result == value
-    elif comparison_operator == '>=':
-        return result >= value
-    elif comparison_operator == '<=':
-        return result <= value
-    else:
-        raise ValueError("Operador de comparação inválido.")
-
-def extrair_valores_em_aspas(string):
-    padrao_aspas = re.compile(r'“([^”]*)”|"(.*?)"')
-    matches = padrao_aspas.findall(string)
-    strings_entre_aspas = [match[0] or match[1] for match in matches]
-    return strings_entre_aspas
-
+#Para apagar
 def find_columns(campo):
     global curso_index
     global unidade_execucao_index
@@ -267,62 +248,20 @@ def find_columns(campo):
     if "Características" in campo and "reais" in campo:
         return sala_real
 
+def calculator(request):
+    return render(request, 'calendario/calculator.html')
 
-def new_criteria(request):
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def calcular_expressao(request):
     if request.method == 'POST':
-        file_content = request.FILES['input_txt_file'].read().decode('utf-8')
+        expressao = request.POST.get('expressao', '')
+        print(expressao)
+        count, classes_list = aux_new_criteria(expressao)
 
-        operadores = ['+', '-', '*', '/']
-        sinais = ['>', '<', '=', '>=', '<=']
-        campos, operador_formula, sinal_formula = None, None, None
-
-        for sinal in sinais:
-            if sinal in file_content:
-                campos = file_content.split(sinal)
-                sinal_formula = sinal
-                break
-
-        campos[1] = campos[1].rstrip('.')
-        valor = float(campos[1])
-        print(sinal_formula)
-        print(campos[0])
-
-        tem_operador = False
-        for operador in operadores:
-            if operador in campos[0]:
-                tem_operador = True
-                campo_1, campo_2 = campos[0].split(operador)
-                operador_formula = operador
-                campo_1 = extrair_valores_em_aspas(campo_1)
-                campo_2 = extrair_valores_em_aspas(campo_2)
-                print(campo_1, campo_2, operador_formula, sinal_formula, valor)
-                column1 = find_columns(campo_1)
-                column2 = find_columns(campo_2)
-                print(column1, column2)
-                break
-
-        if tem_operador == False:
-            campo_1 = campos[0]
-            campo_1 = extrair_valores_em_aspas(campo_1)
-            print(campo_1)
-            column1 = find_columns(campo_1)
-            print(column1)
-            column2 = None
-            operador_formula = None
-
-        try:
-            csv_file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
-            with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
-                file_to_read = csv_file.read()
-            count, classes_list=aux_new_criteria(file_to_read, column1, column2, operador_formula, sinal_formula, valor)
-            return HttpResponse(f"Critério de qualidade pedido: {file_content}<br>"
-                                f"Número de aulas que correspondem ao critério: {count}<br><br><br>"
-                                f"Aulas que correspondem ao critério: <br>{classes_list}<br>")
-
-        except Exception as e:
-            return HttpResponse(f"Error reading CSV file")
-
-    return HttpResponse("Error uploading txt file")
+        return HttpResponse(str(count))
+    return HttpResponse('Método não permitido')
 
 def save_file(file_path, content):
     try:
