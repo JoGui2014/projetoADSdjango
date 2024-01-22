@@ -204,6 +204,7 @@ def aux_new_criteria(expressao):
     except Exception as e:
         return HttpResponse('Expressão inválida.')
 
+
 #Para apagar
 def find_columns(campo):
     global curso_index
