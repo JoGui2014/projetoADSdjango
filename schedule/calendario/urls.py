@@ -16,4 +16,6 @@ urlpatterns = [
     path('get_events/', views.get_events, name='get_events'),
     path('calculator/', calculator, name='calculator'),
     path('calcular-expressao/', calcular_expressao, name='calcular_expressao'),
+    path('heatmap/', views.heatmap_view, name='heatmap'),
+    path('cordas/', views.cordas_view, name='cordas'),
 ]

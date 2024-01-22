@@ -105,7 +105,7 @@ def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
         salas_sem_caracteristicas += 1
     if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_desperdicadas += 1
-    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas+=1
     if "videoconferencia" in tipo_de_sala_real and "videoconferencia" not in tipo_de_sala_expectado and salas_desperdicadas != 1 and salas_sem_caracteristicas != 1:
         salas_desperdicadas += 1
@@ -197,7 +197,6 @@ def aux_new_criteria(expressao):
         return count, classes_list
     except Exception as e:
         return HttpResponse('Expressão inválida.')
-
 
 #Para apagar
 def find_columns(campo):
@@ -382,18 +381,42 @@ def convertView(request):
 
 def class_rooms(request):
     if request.method == 'POST':
-        file = request.FILES.get('class_rooms')
+        class_rooms_file = request.FILES.get('class_rooms')
+        classes_file = request.FILES.get('classes')
 
-    if not file.name.endswith('.csv'):
-        return HttpResponse("Please upload a valid CSV file")
-    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\CaracterizaçãoDasSalas.csv"
-    try:
-        file_content = file.read().decode("utf-8")
-        saved_file_path = save_file(save_path, file_content)
-    except Exception as e:
-        return HttpResponse(f"Error processing the uploaded file: {str(e)}")
+        if not class_rooms_file.name.endswith('.csv') or not classes_file.name.endswith('.csv'):
+            return HttpResponse("Please upload valid CSV files")
+
+        create_schedule(class_rooms_file, classes_file)
 
     return render(request, 'calendario/homePage.html')
+
+def save_file(save_path, file_content):
+    with open(save_path, 'w', encoding='utf-8') as file:
+        file.write(file_content)
+    return save_path
+
+def create_schedule(class_rooms_file, classes_file):
+    save_path_class_rooms = os.path.join(
+        r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static",
+        "CaracterizaçãoDasSalas.csv"
+    )
+    save_path_classes_file = os.path.join(
+        r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static", "HorarioNovo.csv"
+    )
+
+    with open(classes_file, 'r', newline='', encoding='utf-8') as original_file:
+        csv_reader = csv.reader(original_file)
+        lines = list(csv_reader)
+
+    # Remoção dos dados das últimas 3 colunas, exceto o cabeçalho
+    for line in lines[1:]:
+        del line[-3:]
+
+    # Escrita do novo conteúdo em um novo arquivo
+    with open(save_path_classes_file, 'w', newline='', encoding='utf-8') as new_file:
+        csv_writer = csv.writer(new_file)
+        csv_writer.writerows(lines)
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -501,7 +524,8 @@ def process_csv_to_events(data):
     # Read CSV data and extract relevant information
     for row in data:
         # Extract fields from the CSV row
-        title = f"{row['Curso']} - {row['Unidade de execução']}"
+        #print(row)
+        title = "{row[r'\ufeffCurso']} - {row['Unidade de execução']}"
         start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
         end_time = convert_to_iso_format(f"{row['Dia']};{row['Fim']}")
         quality = False
@@ -533,3 +557,39 @@ def convert_to_iso_format(datetime_str):
         # You might want to customize this part based on your requirements
         print("Invalid date/time format:", datetime_str)
         return "2024-00-00T00:00:00"
+
+def heatmap_view(request):
+    z = [[.1, .3, .5, .7, .9],
+         [1, .8, .6, .4, .2],
+         [.2, 0, .5, .7, .9],
+         [.9, .8, .4, .2, 0],
+         [.3, .4, .5, .7, 1]]
+
+    fig = px.imshow(z, text_auto=True)
+
+    graph_json = fig.to_json()
+
+    return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})
+
+import plotly.graph_objects as go
+from django.shortcuts import render
+
+def cordas_view(request):
+    fig = go.Figure(go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=["A", "B", "C", "D", "E"],
+        ),
+        link=dict(
+            source=[0, 0, 1, 1, 2, 2, 3, 3],
+            target=[2, 3, 2, 4, 3, 4, 3, 4],
+            value=[8, 4, 2, 8, 4, 2, 2, 8],
+        )
+    ))
+
+    fig.update_layout(title_text="Chord Diagram Example")
+    graph_json = fig.to_json()
+
+    return render(request, 'calendario/cordas.html', {'graph_json': graph_json})

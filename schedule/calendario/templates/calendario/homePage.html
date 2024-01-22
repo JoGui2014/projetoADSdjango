@@ -5,7 +5,7 @@
 </head>
 <body>
 
-    <h1>Escolha um ficheiro de Horários</h1>
+    <h1>Escolha um ficheiro de Horários, para converter em ficheiro csv ou json</h1>
     <form id="schedule_form" action=" {% url 'calendario:convertView' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <label for="uploaded_file">Selecionar ficheiro:</label>
@@ -13,11 +13,13 @@
         <input type="submit" value="Submeter" name="submeter">
     </form>
 
-    <h1>Escolha um ficheiro de Salas</h1>
+    <h1>Criar novo horário</h1>
     <form action=" {% url 'calendario:class_rooms' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="class_rooms">Selecionar ficheiro:</label>
+        <label for="class_rooms">Selecionar ficheiro de salas:</label>
         <input type="file" id="class_rooms" name="class_rooms"><br><br>
+        <label for="classes">Selecionar ficheiro de aulas:</label>
+        <input type="file" id="classes" name="classes"><br><br>
         <input type="submit" value="Submeter" name="submeter">
     </form><br>
 
@@ -54,7 +56,29 @@
         <input type="number" id="sala_real" name="sala_real"><br><br>
     <input type="submit" value="Visualizar">
 </form>
+<h1>Visualizar Heatmap</h1>
 
+    <form method="post" action="{% url 'calendario:heatmap' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+
+        <label for="x">X Value:</label>
+        <input type="text" id="x" name="x_value" required>
+
+        <label for="y">Y Value:</label>
+        <input type="text" id="y" name="y_value" required>
+
+        <label for="intensity">Intensity:</label>
+        <input type="text" id="intensity" name="intensity" required>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <h1>Visualizar Gráfico de Cordas</h1>
+
+    <form method="post" action="{% url 'calendario:cordas' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+        <input type="submit" value="Visualizar">
+    </form>
 
 
 
