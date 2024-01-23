@@ -10,3 +10,8 @@ class CalendarEvent(models.Model):
 
     def __str__(self):
         return self.title
+
+class HeatmapData(models.Model):
+    x = models.FloatField()
+    y = models.FloatField()
+    intensity = models.FloatField()

@@ -92,32 +92,26 @@ def get_information_sections(file):
 
 def get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real):
     salas_sem_caracteristicas=0
-    salas_desperdiçadas=0
-    #list=[]
-    # Pedir Sala de Aulas e sair Arq???
+    salas_desperdicadas=0
     if "Arq" in tipo_de_sala_expectado.strip() and ("Arq" not in tipo_de_sala_real.strip() and "Computadores" not in tipo_de_sala_expectado.strip()):
         salas_sem_caracteristicas+=1
     if "Arq" in tipo_de_sala_real.strip() and ("Arq" not in tipo_de_sala_expectado.strip() and "Computadores" not in tipo_de_sala_real.strip()):
-        salas_desperdiçadas += 1
-    # if "Lab" in tipo_de_sala_expectado.strip() and (tipo_de_sala_expectado.strip() not in tipo_de_sala_real.strip()):
-    #     salas_sem_caracteristicas += 1
-    # if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()):
-    #     salas_desperdiçadas += 1
-    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas += 1
+    if "Lab" in tipo_de_sala_expectado.strip() and ("Lab" not in tipo_de_sala_real.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas += 1
-    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "Lab" in tipo_de_sala_real.strip() and ("Lab" not in tipo_de_sala_expectado.strip()) and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas += 1
+    if "BYOD" in tipo_de_sala_expectado and "BYOD" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas += 1
-    # Se for de aulas???
-    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and "aulas" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas += 1
-    #Videoconferencia????
-    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
+    if "BYOD" in tipo_de_sala_real and "BYOD" not in tipo_de_sala_expectado and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas += 1
+    if "videoconferencia" in tipo_de_sala_expectado and "videoconferencia" not in tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
         salas_sem_caracteristicas+=1
-    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdiçadas!=1 and salas_sem_caracteristicas!=1:
-        salas_desperdiçadas+=1
-    return salas_desperdiçadas, salas_sem_caracteristicas
+    if "videoconferencia" in tipo_de_sala_real and "videoconferencia" not in tipo_de_sala_expectado and salas_desperdicadas != 1 and salas_sem_caracteristicas != 1:
+        salas_desperdicadas += 1
+    if "Não necessita de sala" in tipo_de_sala_expectado and tipo_de_sala_real and salas_desperdicadas!=1 and salas_sem_caracteristicas!=1:
+        salas_desperdicadas+=1
+    return salas_desperdicadas, salas_sem_caracteristicas
 
 def get_informations(request):
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
@@ -159,71 +153,52 @@ def get_informations(request):
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
-def aux_new_criteria(csv_content, column1, column2, operador_formula, sinal_formula, valor):
-    classes_list = []
-    csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
-    count = 0
-    classes_list.append(csv_data[0])
+def aux_new_criteria(expressao):
+    try:
+        csv_file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
+        with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
+            csv_content = csv_file.read()
+        classes_list = []
+        csv_data = [line.split(';') for line in csv_content.split('\n') if line]  # Convert CSV string to a list of lists
+        count = 0
+        classes_list.append(csv_data[0])
 
-    if csv_data:
-        for row in csv_data[1:]:
-            try:
-                campo_1 = row[column1]
-                if column2 is not None and operador_formula is not None:
-                    campo_2 = row[column2]
-                    resultado = evaluate_expression(campo_1, operador_formula, campo_2, sinal_formula, valor)
-                    print(resultado)
-                    if resultado:
-                        count+=1
-                        classes_list.append(row)
-                else:
-                    resultado = evaluate_expression(campo_1, None, None, sinal_formula, valor)
-                    print(resultado)
-                    if resultado:
+        if csv_data:
+            for row in csv_data[1:]:
+                try:
+                    # Construir código dinâmico
+                    code = f"expression_result = {expressao}"
+                    local_vars = {'row': row,
+                                  'Curso': (row[curso_index]) if 'Curso' in expressao else None,
+                                  'Unidade': (row[unidade_execucao_index]) if 'Unidade' in expressao else None,
+                                  'Turno': (row[turno_index]) if 'Turno' in expressao else None,
+                                  'Turma': (row[turma_index]) if 'Turma' in expressao else None,
+                                  'Inscritos': int(row[inscritos_index]) if 'Inscritos' in expressao else None,
+                                  'Dia_Da_Semana': (row[dia_semana_index]) if 'Dia_Da_Semana' in expressao else None,
+                                  'Início': (row[inicio_index]) if 'Início' in expressao else None,
+                                  'Fim': (row[fim_index]) if 'Fim' in expressao else None,
+                                  'Dia_Do_Ano': (row[dia_index]) if 'Dia_Do_Ano' in expressao else None,
+                                  'Características_pedidas': (row[sala_expectavel]) if 'Características_pedidas' in expressao else None,
+                                  'Sala': (row[sala_index]) if 'Sala' in expressao else None,
+                                  'Lotação': int(row[lotacao_index]) if 'Lotação' in expressao else None,
+                                  'Características_reais': (row[sala_real]) if 'Características_reais' in expressao else None,
+                                  }
+
+                    # Executar código dinâmico
+                    exec(code, globals(), local_vars)
+                    expression_result = local_vars['expression_result']
+
+                    if expression_result:
                         count += 1
                         classes_list.append(row)
+                        print(f'Expressão Avaliada: {expressao}')
+                except Exception as e:
+                    print(e)
+        return count, classes_list
+    except Exception as e:
+        return HttpResponse('Expressão inválida.')
 
-            except Exception as e:
-                print(e)
-    return count, classes_list
-
-def evaluate_expression(operand1, operator, operand2, comparison_operator, value):
-    operand1 = float(operand1)
-    if operand2 is not None and operator is not None:
-        operand2 = float(operand2)
-
-        if operator == '+':
-            result = operand1 + operand2
-        elif operator == '-':
-            result = operand1 - operand2
-        elif operator == '*':
-            result = operand1 * operand2
-        elif operator == '/':
-            result = operand1 / operand2
-        else:
-            raise ValueError("Operador inválido.")
-    else:
-        result = operand1
-
-    if comparison_operator == '>':
-        return result > value
-    elif comparison_operator == '<':
-        return result < value
-    elif comparison_operator == '=':
-        return result == value
-    elif comparison_operator == '>=':
-        return result >= value
-    elif comparison_operator == '<=':
-        return result <= value
-    else:
-        raise ValueError("Operador de comparação inválido.")
-
-def extrair_valores_em_aspas(string):
-    padrao_aspas = re.compile(r'“([^”]*)”|"(.*?)"')
-    matches = padrao_aspas.findall(string)
-    strings_entre_aspas = [match[0] or match[1] for match in matches]
-    return strings_entre_aspas
-
+#Para apagar
 def find_columns(campo):
     global curso_index
     global unidade_execucao_index
@@ -267,62 +242,20 @@ def find_columns(campo):
     if "Características" in campo and "reais" in campo:
         return sala_real
 
+def calculator(request):
+    return render(request, 'calendario/calculator.html')
 
-def new_criteria(request):
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def calcular_expressao(request):
     if request.method == 'POST':
-        file_content = request.FILES['input_txt_file'].read().decode('utf-8')
+        expressao = request.POST.get('expressao', '')
+        print(expressao)
+        count, classes_list = aux_new_criteria(expressao)
 
-        operadores = ['+', '-', '*', '/']
-        sinais = ['>', '<', '=', '>=', '<=']
-        campos, operador_formula, sinal_formula = None, None, None
-
-        for sinal in sinais:
-            if sinal in file_content:
-                campos = file_content.split(sinal)
-                sinal_formula = sinal
-                break
-
-        campos[1] = campos[1].rstrip('.')
-        valor = float(campos[1])
-        print(sinal_formula)
-        print(campos[0])
-
-        tem_operador = False
-        for operador in operadores:
-            if operador in campos[0]:
-                tem_operador = True
-                campo_1, campo_2 = campos[0].split(operador)
-                operador_formula = operador
-                campo_1 = extrair_valores_em_aspas(campo_1)
-                campo_2 = extrair_valores_em_aspas(campo_2)
-                print(campo_1, campo_2, operador_formula, sinal_formula, valor)
-                column1 = find_columns(campo_1)
-                column2 = find_columns(campo_2)
-                print(column1, column2)
-                break
-
-        if tem_operador == False:
-            campo_1 = campos[0]
-            campo_1 = extrair_valores_em_aspas(campo_1)
-            print(campo_1)
-            column1 = find_columns(campo_1)
-            print(column1)
-            column2 = None
-            operador_formula = None
-
-        try:
-            csv_file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
-            with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
-                file_to_read = csv_file.read()
-            count, classes_list=aux_new_criteria(file_to_read, column1, column2, operador_formula, sinal_formula, valor)
-            return HttpResponse(f"Critério de qualidade pedido: {file_content}<br>"
-                                f"Número de aulas que correspondem ao critério: {count}<br><br><br>"
-                                f"Aulas que correspondem ao critério: <br>{classes_list}<br>")
-
-        except Exception as e:
-            return HttpResponse(f"Error reading CSV file")
-
-    return HttpResponse("Error uploading txt file")
+        return HttpResponse(str(count))
+    return HttpResponse('Método não permitido')
 
 def save_file(file_path, content):
     try:
@@ -448,18 +381,52 @@ def convertView(request):
 
 def class_rooms(request):
     if request.method == 'POST':
-        file = request.FILES.get('class_rooms')
+        class_rooms_file = request.FILES.get('class_rooms')
+        classes_file = request.FILES.get('classes')
 
-    if not file.name.endswith('.csv'):
-        return HttpResponse("Please upload a valid CSV file")
-    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\CaracterizaçãoDasSalas.csv"
-    try:
-        file_content = file.read().decode("utf-8")
-        saved_file_path = save_file(save_path, file_content)
-    except Exception as e:
-        return HttpResponse(f"Error processing the uploaded file: {str(e)}")
+        if not class_rooms_file.name.endswith('.csv') or not classes_file.name.endswith('.csv'):
+            return HttpResponse("Please upload valid CSV files")
+
+        with class_rooms_file as class_rooms_input:
+            class_rooms_csv_data = class_rooms_input.read().decode("utf-8")
+            class_rooms_csv_data = [line.split(';') for line in class_rooms_csv_data.split('\n') if line]
+
+        with classes_file as input_stream:
+            csv_data = input_stream.read().decode("utf-8")
+            csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
+            header_row = csv_data[0]
+
+            if csv_data and class_rooms_csv_data:
+                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
+                with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(header_row)
+                    for row in csv_data[1:]:
+                        try:
+                            row_without_last_three_columns = row[:-3]  # Remover as últimas três colunas de cada linha
+
+                            # Tenta encontrar uma sala disponível no arquivo de salas
+                            available_room = find_available_room(class_rooms_csv_data, row)
+
+                            # Se encontrar uma sala disponível, adiciona à linha de dados
+                            if available_room:
+                                row_without_last_three_columns.extend(available_room)
+
+                            csv_writer.writerow(row_without_last_three_columns)
+                        except ValueError as e:
+                                print(str(e))
 
     return render(request, 'calendario/homePage.html')
+
+
+def find_available_room(class_rooms_csv_data, row):
+ return
+
+
+def save_file(save_path, file_content):
+    with open(save_path, 'w', encoding='utf-8') as file:
+        file.write(file_content)
+    return save_path
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -567,7 +534,9 @@ def process_csv_to_events(data):
     # Read CSV data and extract relevant information
     for row in data:
         # Extract fields from the CSV row
-        title = f"{row['Curso']} - {row['Unidade de execução']}"
+        #print(row)
+        #title = f"{row[r'\\ufeffCurso']} - {row['Unidade de execução']}"
+        title = "{} - {}".format(row.get(r'\ufeffCurso', ''), row.get('Unidade de execução', ''))
         start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
         end_time = convert_to_iso_format(f"{row['Dia']};{row['Fim']}")
         quality = False
@@ -599,3 +568,39 @@ def convert_to_iso_format(datetime_str):
         # You might want to customize this part based on your requirements
         print("Invalid date/time format:", datetime_str)
         return "2024-00-00T00:00:00"
+
+def heatmap_view(request):
+    z = [[.1, .3, .5, .7, .9],
+         [1, .8, .6, .4, .2],
+         [.2, 0, .5, .7, .9],
+         [.9, .8, .4, .2, 0],
+         [.3, .4, .5, .7, 1]]
+
+    fig = px.imshow(z, text_auto=True)
+
+    graph_json = fig.to_json()
+
+    return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})
+
+import plotly.graph_objects as go
+from django.shortcuts import render
+
+def cordas_view(request):
+    fig = go.Figure(go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=["A", "B", "C", "D", "E"],
+        ),
+        link=dict(
+            source=[0, 0, 1, 1, 2, 2, 3, 3],
+            target=[2, 3, 2, 4, 3, 4, 3, 4],
+            value=[8, 4, 2, 8, 4, 2, 2, 8],
+        )
+    ))
+
+    fig.update_layout(title_text="Chord Diagram Example")
+    graph_json = fig.to_json()
+
+    return render(request, 'calendario/cordas.html', {'graph_json': graph_json})
