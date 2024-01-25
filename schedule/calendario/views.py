@@ -395,33 +395,225 @@ def class_rooms(request):
             csv_data = input_stream.read().decode("utf-8")
             csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
             header_row = csv_data[0]
-
             if csv_data and class_rooms_csv_data:
                 save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
-                    csv_writer = csv.writer(csv_file)
+                    csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
+
+                    chosen_schedules = []
+
                     for row in csv_data[1:]:
                         try:
-                            row_without_last_three_columns = row[:-3]  # Remover as últimas três colunas de cada linha
+                            print("Linha " + str(csv_data.index(row)))
+                    # Usando DictReader para mapear o cabeçalho aos valores em cada linha
+                    #csv_reader = csv.DictReader(input_stream, delimiter=';')
 
-                            # Tenta encontrar uma sala disponível no arquivo de salas
-                            available_room = find_available_room(class_rooms_csv_data, row)
+                    #for row in csv_data:
+                        #try:
+                            #row_without_times = [row[key] for key in header_row[:5]]
+                            row_without_times = row[:6]
+                            times = False
+                            while times is False:
+                                start_time, end_time = get_times(row, chosen_schedules, header_row)
+                                if start_time is not None and end_time is not None:
+                                    print("Cucu com horas")
+                                    times = True
+
+                            row_without_times.extend([start_time, end_time])
+                            #row_without_times.extend(start_time, end_time)
+                            row_without_times.extend(row[8:-3])
 
                             # Se encontrar uma sala disponível, adiciona à linha de dados
-                            if available_room:
-                                row_without_last_three_columns.extend(available_room)
+                            header_row_class_rooms = class_rooms_csv_data[0]
 
-                            csv_writer.writerow(row_without_last_three_columns)
+                            # Constrói o índice das salas
+                            room_index = build_room_index(class_rooms_csv_data, header_row_class_rooms)
+
+                            available = False
+                            while not available:
+                                if "Não necessita de sala" in row[
+                                    header_row.index('Características da sala pedida para a aula')]:
+                                    available_room, lotacao_room, caracteristicas_sala_dada = '', '', ''
+                                    available = True
+                                    break  # Sair do loop quando a sala não é necessária
+                                else:
+                                    print("Eu passo-me")
+                                    available_room, lotacao_room, caracteristicas_sala_dada = find_available_room(
+                                        class_rooms_csv_data, row, header_row, chosen_schedules, room_index
+                                    )
+                                    if available_room is not None:
+                                        available = True
+
+                            row_without_times.extend([available_room, lotacao_room, caracteristicas_sala_dada])
+                            csv_writer.writerow(row_without_times)
+                            #row_without_last_three_columns.extend(available_room, lotacao_room, sala_dada)
+                            #csv_writer.writerow(row_without_last_three_columns)
+
+                            chosen_schedules.append(
+                        {'turma': row[header_row.index('Turma')], 'dia': row[header_row.index('Dia')], 'start_time': start_time,
+                         'end_time': end_time, 'sala': available_room})
+
                         except ValueError as e:
                                 print(str(e))
 
     return render(request, 'calendario/homePage.html')
 
+import random
 
-def find_available_room(class_rooms_csv_data, row):
- return
 
+def get_times(row, chosen_schedules, header_row):
+    start_time = {'A': '13:00:00', 'B': '08:00:00', 'C': '13:00:00', 'PL': '18:00:00'}
+    end_time = {'A': '17:30:00', 'B': '12:30:00', 'C': '17:30:00', 'PL': '22:30:00'}
+    duration = {'A': [60, 90, 120, 180], 'B': [60, 90, 120, 180], 'C': [60, 90, 120, 180], 'PL': [60, 90, 120, 180]}
+
+    if "PL" in row[header_row.index('Turma')]:
+        ano_letivo_match = 'PL'
+    elif "Sáb" in row[header_row.index('Dia da Semana')]:
+        ano_letivo_match = 'B'
+    else:
+        ano_letivo_match = re.search(r'([A-Ca-c])\d', row[header_row.index('Turma')])
+
+    # Verifica se houve correspondência na expressão regular
+    if ano_letivo_match:
+        if isinstance(ano_letivo_match, str):
+            ano_letivo = ano_letivo_match
+        else:
+            ano_letivo = ano_letivo_match.group(1)
+    else:
+        ano_letivo = 'C'
+
+    if ano_letivo in start_time and ano_letivo in end_time:
+        start_time_minutes = convert_to_minutes(start_time[ano_letivo])
+        end_time_minutes = convert_to_minutes(end_time[ano_letivo])
+
+        # Escolhe um valor aleatório entre start_range e end_range em incrementos de 30 minutos
+        chosen_start_minutes = random.randint(start_time_minutes, end_time_minutes - 30)
+
+        # Convertendo a diferença em minutos para um número de incrementos de 30 minutos
+        minute_difference = (end_time_minutes - chosen_start_minutes) // 30
+
+        # Gerando um número aleatório de incrementos de 30 minutos e convertendo de volta para minutos
+        duration_in_minutes = random.choice(duration[ano_letivo])
+        chosen_end_minutes = chosen_start_minutes + duration_in_minutes
+
+        day = row[header_row.index('Dia da Semana')]
+        turma = row[header_row.index('Turma')]
+
+        # Lógica para verificar sobreposição com aulas já agendadas
+        for schedule_entry in chosen_schedules:
+            if (
+                    schedule_entry['turma'] == turma
+                    and schedule_entry['dia'] == day
+                    and overlap(convert_to_time(chosen_start_minutes), end, schedule_entry['start_time'],
+                                schedule_entry['end_time'])
+            ):
+                print(
+                    f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)}, Fim: {convert_to_time(chosen_end_minutes)} - Sala indisponível (sobreposição de horários).")
+                return None, None
+
+        print(
+            f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
+        return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
+
+    return None, None
+
+def convert_to_minutes(time_string):
+    # Converte uma string de tempo para minutos
+    hours, minutes, _ = map(int, time_string.split(':'))
+    return hours * 60 + minutes
+
+def convert_to_time(minutes):
+    hours, remainder = divmod(minutes, 60)
+    minutes, _ = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:00"
+
+def build_room_index(class_rooms_csv_data, header_row):
+    room_index = {}
+
+    for room_row in class_rooms_csv_data[1:]:
+        room_id = room_row[header_row.index('Nome sala')]
+        characteristics = {}
+
+        for column in header_row:
+            if 'Arq' in column and 'Computadores' not in column:
+                characteristics[column] = room_row[header_row.index(column)]
+            elif 'Lab' in column:
+                characteristics[column] = room_row[header_row.index(column)]
+            elif 'BYOD' in column:
+                characteristics[column] = room_row[header_row.index(column)]
+            elif 'videoconferencia' in column:
+                characteristics[column] = room_row[header_row.index(column)]
+            elif 'Auditório' in column or 'auditório' in column:
+                characteristics[column] = room_row[header_row.index(column)]
+            elif 'Aulas' in column or 'aulas' in column or 'Sala' in column:
+                characteristics[column] = room_row[header_row.index(column)]
+
+
+        room_index[room_id] = {
+            'lotacao': room_row[header_row.index('Capacidade Normal')],
+            'caracteristicas': characteristics
+        }
+
+    return room_index
+
+def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules, room_index):
+    day = row[header_row.index('Dia')]
+    start_time = row[header_row.index('Início')]
+    end_time = row[header_row.index('Fim')]
+    sala_pedida = row[header_row.index('Características da sala pedida para a aula')]
+
+    for room_id, room_info in room_index.items():
+        print("Juro que estou a tentar")
+        # Verifica se a sala atende a pelo menos uma característica marcada na sala_pedida
+        #characteristic_index = has_feature(sala_pedida.split(','), room_info['caracteristicas'], header_row)
+        #if characteristic_index is not None:
+        if any(room_info['caracteristicas'].get(characteristic) == 'X' for characteristic in sala_pedida.split(' ')):
+            print("Há uma :0")
+
+            characteristic_index = has_feature(sala_pedida.split(','), room_info['caracteristicas'], header_row)
+            print(characteristic_index)
+            if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                print("E não tem aulas :0")
+                return room_id, room_info['lotacao'], room_info['caracteristicas']
+                #return room_id, room_info['lotacao'],  room_info['caracteristicas'][header_row.index(characteristic)]
+
+    for room_id, room_info in room_index.items():
+        if "Arq" not in room_info['caracteristicas'] and "Lab" not in room_info['caracteristicas'] and "Auditório" not in room_info['caracteristicas']:
+            if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_info['lotacao'], room_info['caracteristicas']
+
+    return None, None, None  # Retorna None se não houver sala disponível
+
+def has_feature(features, room_row, header_row):
+    for index, column in enumerate(header_row):
+        if any(feature in column for feature in features):
+            # Verifica se a célula contém "X"
+            if room_row[index] == 'X':
+                return index
+
+    return None
+
+
+def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+    # Verifica se a sala está ocupada no arquivo de aulas
+
+    for schedule_entry in chosen_schedules:
+
+        if (
+                schedule_entry['sala'] == room_id
+                and schedule_entry['dia'] == day
+                and overlap(start_time, end_time, schedule_entry['start_time'],
+                            schedule_entry['end_time'])
+        ):
+            print("Sala " + room_id + " ocupada.")
+            return True  # A sala está ocupada
+    print("Sala " + room_id + " disponível.")
+    return False  # A sala está disponível
+
+def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
+    # Verifica se há sobreposição de horários
+    return start_time_1 < end_time_2 and start_time_2 < end_time_1
 
 def save_file(save_path, file_content):
     with open(save_path, 'w', encoding='utf-8') as file:
