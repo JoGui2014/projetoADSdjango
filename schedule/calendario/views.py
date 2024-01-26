@@ -53,6 +53,7 @@ def get_information_sections(file):
                     total_aulas=0
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
+                    nao_necessita_sala = 0
 
                     save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\overpopulated_classes.csv"
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
@@ -73,6 +74,8 @@ def get_information_sections(file):
                                 aulas_com_sala_list.append(row)
 
                                 tipo_de_sala_expectado = row[sala_expectavel]
+                                if "Não necessita de sala" in tipo_de_sala_expectado:
+                                    nao_necessita_sala+=1
                                 tipo_de_sala_real = row[sala_real]
                                 result = get_class_room_characteristics(tipo_de_sala_expectado, tipo_de_sala_real)
                                 if result[0]>0:
@@ -86,7 +89,7 @@ def get_information_sections(file):
                             except ValueError as e:
                                 print(str(e))
                             total_aulas+=1
-                    return count, sum_students, total_aulas-aulas_com_sala, salas_desperdicadas, salas_sem_caracteristicas
+                    return count, sum_students, total_aulas-aulas_com_sala-nao_necessita_sala, salas_desperdicadas, salas_sem_caracteristicas
     except Exception as e:
         return print(str(e))
 
@@ -127,7 +130,7 @@ def get_informations(request):
             return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
 
         number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
-        if number==0:
+        '''if number==0:
             return HttpResponse("Erro ao recolher número de aulas em sobrelotação.")
         if sum_students==0:
             return HttpResponse("Erro ao recolher número de alunos com aulas em sobrelotação.")
@@ -138,18 +141,14 @@ def get_informations(request):
         if salas_sem_caracteristicas == 0:
             return HttpResponse("Erro ao recolher número de salas sem as características solicitadas pelo docente.")
             #Número de alunos em sobrelotação é número de alunos a mais em cada sobrelotação ou número total dessas aulas???
+        '''
         return HttpResponse(
             f"Número de aulas em sobrelotação: {number}<br>"
             f"Número de alunos com aulas em sobrelotação: {sum_students}<br>"
             f"Número de aulas sem sala atribuída: {aulas_sem_sala}<br>"
             f"Número de características desperdiçadas nas salas atribuídas às aulas: {salas_desperdicadas}<br>"
             f"Número de salas sem as características solicitadas pelo docente: {salas_sem_caracteristicas}<br><br>"
-            f"Aulas desperdiçadas: {salas_desperdicadas_list}<br><br>"
-            f"Aulas sem características: {salas_sem_caracteristicas_list}<br><br>"
-            f"Aulas sobrelotadas: {aulas_sobrelotadas_list}<br><br>"
-            f"Aulas sem sala: {aulas_sem_sala_list}<br><br>"
         )
-    # Retirar listas!!!!!
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
@@ -558,6 +557,7 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
     start_time = row[header_row.index('Início')]
     end_time = row[header_row.index('Fim')]
     sala_pedida = row[header_row.index('Características da sala pedida para a aula')]
+    aula = row[header_row.index('Unidade de execução')]
     header_row = class_rooms_csv_data[0]
 
     for room_row in class_rooms_csv_data[1:]:
@@ -571,29 +571,41 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
             feature = [col for col in header_row if 'Arq' in col and 'Computadores' not in col]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
-        elif "Lab" in sala_pedida:
-            feature = [col for col in header_row if 'Lab' in col]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
+        elif "Lab ISTA" in sala_pedida:
+            '''if "electr" in aula.lower():
+                print(aula)
+                feature = [col for col in header_row if 'Laboratório de Electrónica' in col]
+            '''
+            if "Jornalismo" in sala_pedida:
+                feature = [col for col in header_row if 'Jornalismo' in col]
+            else:
+                feature = [col for col in header_row if 'Laboratório' in col and "Jornalismo" not in col and "D" not in room_id]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
+        elif "Lab" in sala_pedida and not "ISTA" in sala_pedida:
+            feature = [col for col in header_row if 'Laboratório' not in room_id and 'Laboratório' in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "BYOD" in sala_pedida and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
             feature = [col for col in header_row if 'BYOD' in col]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None:
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "videoconferencia" in sala_pedida and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
             feature = [col for col in header_row if 'videoconferencia' in col]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None:
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "Não necessita de sala" in sala_pedida:
             return '', ''
         elif "Auditório" in sala_pedida or "auditório" in sala_pedida:
             feature = [col for col in header_row if 'Auditório' in col or 'auditório' in col]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "aulas" in sala_pedida or "Aulas" in sala_pedida:
             print("ola")
             if "Auditório" in sala_pedida:
@@ -604,16 +616,20 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
                 feature = [col for col in header_row if ('Aulas' in col or 'aulas' in col) and 'Anfiteatro' not in room_id and 'Auditório' not in room_id]
             caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+                return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
 
     return None, None, None  # Retorna None se não houver sala disponível
 
 def has_feature(feature, room_row, header_row):
+    features = []
     for column in feature:
         # Verifica se a célula contém "X"
         if room_row[header_row.index(column)] == 'X':
-            return header_row.index(column)
-
+            #print(header_row[column])
+            print(column)
+            features.append(str(column))
+    if len(features) > 0:
+        return ", ".join(features)
     return None
 
 '''
@@ -685,8 +701,23 @@ def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
     return False  # A sala está disponível
 
 def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
+    # Converte os tempos de string para objetos time
+    start_time_1 = convert_to_minutes(start_time_1)
+    print(start_time_1)
+    end_time_1 = convert_to_minutes(end_time_1)
+    start_time_2 = convert_to_minutes(start_time_2)
+    end_time_2 = convert_to_minutes(end_time_2)
+    print(start_time_2)
+    print(end_time_1)
+    print(end_time_2)
+
     # Verifica se há sobreposição de horários
-    return start_time_1 < end_time_2 and start_time_2 < end_time_1
+    condition_1 = start_time_1 < start_time_2 < end_time_1
+    condition_2 = start_time_1 < end_time_2 < end_time_1
+    condition_3 = start_time_2 < start_time_1 < end_time_2
+    condition_4 = start_time_2 < end_time_1 < end_time_2
+
+    return condition_1 or condition_2 or condition_3 or condition_4
 
 def save_file(save_path, file_content):
     with open(save_path, 'w', encoding='utf-8') as file:
@@ -698,7 +729,7 @@ def home(request):
 
 import json
 from django.http import JsonResponse
-
+import io
 
 def observeCalendar(request):
     global curso_index
@@ -748,7 +779,8 @@ def observeCalendar(request):
 
 
         if uploaded_file and uploaded_file.name.endswith('.csv'):
-            with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
+            #with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
+            with io.TextIOWrapper(uploaded_file.file, encoding='UTF-8') as file:
                 csv_reader = csv.DictReader(file, delimiter=';')
                 data = [row for row in csv_reader]
             events = process_csv_to_events(data)
