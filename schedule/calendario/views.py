@@ -400,6 +400,8 @@ def class_rooms(request):
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
+                    # Constrói o índice das salas
+                    #room_index = build_room_index(class_rooms_csv_data)
 
                     chosen_schedules = []
 
@@ -424,12 +426,6 @@ def class_rooms(request):
                             #row_without_times.extend(start_time, end_time)
                             row_without_times.extend(row[8:-3])
 
-                            # Se encontrar uma sala disponível, adiciona à linha de dados
-                            header_row_class_rooms = class_rooms_csv_data[0]
-
-                            # Constrói o índice das salas
-                            room_index = build_room_index(class_rooms_csv_data, header_row_class_rooms)
-
                             available = False
                             while not available:
                                 if "Não necessita de sala" in row[
@@ -440,7 +436,7 @@ def class_rooms(request):
                                 else:
                                     print("Eu passo-me")
                                     available_room, lotacao_room, caracteristicas_sala_dada = find_available_room(
-                                        class_rooms_csv_data, row, header_row, chosen_schedules, room_index
+                                        class_rooms_csv_data, row, header_row, chosen_schedules
                                     )
                                     if available_room is not None:
                                         available = True
@@ -528,9 +524,9 @@ def convert_to_time(minutes):
     minutes, _ = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:00"
 
-def build_room_index(class_rooms_csv_data, header_row):
+def build_room_index(class_rooms_csv_data):
     room_index = {}
-
+    header_row = class_rooms_csv_data[0]
     for room_row in class_rooms_csv_data[1:]:
         room_id = room_row[header_row.index('Nome sala')]
         characteristics = {}
@@ -557,43 +553,120 @@ def build_room_index(class_rooms_csv_data, header_row):
 
     return room_index
 
+def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules):
+    day = row[header_row.index('Dia')]
+    start_time = row[header_row.index('Início')]
+    end_time = row[header_row.index('Fim')]
+    sala_pedida = row[header_row.index('Características da sala pedida para a aula')]
+    header_row = class_rooms_csv_data[0]
+
+    for room_row in class_rooms_csv_data[1:]:
+        room_id = room_row[header_row.index('Nome sala')]
+
+        print("Juro que estou a tentar")
+        print(sala_pedida)
+        # Switch case para determinar o tipo de sala com base na sala_pedida
+        if "Arq" in sala_pedida and "Computadores" not in sala_pedida:
+            # Colunas que contêm "Arq"
+            feature = [col for col in header_row if 'Arq' in col and 'Computadores' not in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+        elif "Lab" in sala_pedida:
+            feature = [col for col in header_row if 'Lab' in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+        elif "BYOD" in sala_pedida and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+            feature = [col for col in header_row if 'BYOD' in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None:
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+        elif "videoconferencia" in sala_pedida and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+            feature = [col for col in header_row if 'videoconferencia' in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None:
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+        elif "Não necessita de sala" in sala_pedida:
+            return '', ''
+        elif "Auditório" in sala_pedida or "auditório" in sala_pedida:
+            feature = [col for col in header_row if 'Auditório' in col or 'auditório' in col]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+        elif "aulas" in sala_pedida or "Aulas" in sala_pedida:
+            print("ola")
+            if "Auditório" in sala_pedida:
+                feature = [col for col in header_row if 'Auditório' in col]
+            elif "Anfiteatro" in sala_pedida:
+                feature = [col for col in header_row if 'Anfiteatro' in col]
+            else:
+                feature = [col for col in header_row if ('Aulas' in col or 'aulas' in col) and 'Anfiteatro' not in room_id and 'Auditório' not in room_id]
+            caracteristicas_sala_dada = has_feature(feature, room_row, header_row)
+            if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+                return room_id, room_row[header_row.index('Capacidade Normal')], header_row[caracteristicas_sala_dada]
+
+    return None, None, None  # Retorna None se não houver sala disponível
+
+def has_feature(feature, room_row, header_row):
+    for column in feature:
+        # Verifica se a célula contém "X"
+        if room_row[header_row.index(column)] == 'X':
+            return header_row.index(column)
+
+    return None
+
+'''
 def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules, room_index):
     day = row[header_row.index('Dia')]
     start_time = row[header_row.index('Início')]
     end_time = row[header_row.index('Fim')]
     sala_pedida = row[header_row.index('Características da sala pedida para a aula')]
+    sala_pedida = sala_pedida.split(' ')
 
+    classes_header_row = class_rooms_csv_data[0]
     for room_id, room_info in room_index.items():
-        print("Juro que estou a tentar")
+        print(f"Verificando sala {room_id}")
+        #print("Juro que estou a tentar")
         # Verifica se a sala atende a pelo menos uma característica marcada na sala_pedida
-        #characteristic_index = has_feature(sala_pedida.split(','), room_info['caracteristicas'], header_row)
-        #if characteristic_index is not None:
-        if any(room_info['caracteristicas'].get(characteristic) == 'X' for characteristic in sala_pedida.split(' ')):
+        characteristic_index = has_feature(sala_pedida, room_info['caracteristicas'], classes_header_row)
+        if characteristic_index is not None:
+            print("index:" + str(characteristic_index))
+        #if any(room_info['caracteristicas'].get(characteristic) == 'X' for characteristic in sala_pedida):
             print("Há uma :0")
 
-            characteristic_index = has_feature(sala_pedida.split(','), room_info['caracteristicas'], header_row)
-            print(characteristic_index)
+                #print("Como assim mano")
+                        # Verifica se a sala não tem aulas no mesmo horário
             if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+
                 print("E não tem aulas :0")
                 return room_id, room_info['lotacao'], room_info['caracteristicas']
-                #return room_id, room_info['lotacao'],  room_info['caracteristicas'][header_row.index(characteristic)]
 
+                    # Se não encontrou sala com 'X', procura por uma sala genérica
+                #print("Está crazy")
     for room_id, room_info in room_index.items():
         if "Arq" not in room_info['caracteristicas'] and "Lab" not in room_info['caracteristicas'] and "Auditório" not in room_info['caracteristicas']:
             if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
+
                 return room_id, room_info['lotacao'], room_info['caracteristicas']
 
     return None, None, None  # Retorna None se não houver sala disponível
 
+def check_x_in_row(row):
+    for value in row:
+        if value == 'X':
+            return True  # Se encontrar 'X' em qualquer coluna, retorna True
+    return False
+
 def has_feature(features, room_row, header_row):
     for index, column in enumerate(header_row):
-        if any(feature in column for feature in features):
+        if any(feature in column for feature in features[5:]):
             # Verifica se a célula contém "X"
             if room_row[index] == 'X':
                 return index
 
     return None
-
+'''
 
 def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
     # Verifica se a sala está ocupada no arquivo de aulas
