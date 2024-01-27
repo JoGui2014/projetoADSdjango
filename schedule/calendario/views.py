@@ -28,6 +28,7 @@ app_name = 'src'
 global events_data
 events_data = []
 
+# Listar critérios de qualidade
 def get_information_sections(file):
     global lotacao_index, inscritos_index, sala_index, sala_expectavel, sala_real
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
@@ -143,6 +144,7 @@ def get_informations(request):
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
+# Verificar novo critério de qualidade
 def aux_new_criteria(expressao):
     global new_criteria_file
     try:
@@ -190,50 +192,6 @@ def aux_new_criteria(expressao):
     except Exception as e:
         return HttpResponse('Expressão inválida.')
 
-#Para apagar
-def find_columns(campo):
-    global curso_index
-    global unidade_execucao_index
-    global turno_index
-    global turma_index
-    global inscritos_index
-    global dia_semana_index
-    global inicio_index
-    global fim_index
-    global dia_index
-    global sala_expectavel
-    global sala_index
-    global lotacao_index
-    global sala_real
-
-
-    if "Curso" in campo:
-        return curso_index
-    if "Unidade" in campo or "Cadeira" in campo:
-        return unidade_execucao_index
-    if "Inscritos no turno" in campo:
-        return inscritos_index
-    if "Turno" in campo or "turno" in campo:
-        return turno_index
-    if "Turma" in campo:
-        return turma_index
-    if "Dia" in campo and "Semana" in campo:
-        return dia_semana_index
-    if "Início" in campo:
-        return inicio_index
-    if "Fim" in campo:
-        return fim_index
-    if "Dia" in campo and "Semana" not in campo:
-        return dia_index
-    if "Características" in campo and "pedida" in campo:
-        return sala_expectavel
-    if "Sala" in campo and "pedida" not in campo and "reais" not in campo:
-        return sala_index
-    if "Lotação" in campo:
-        return lotacao_index
-    if "Características" in campo and "reais" in campo:
-        return sala_real
-
 def calculator(request):
     global new_criteria_file
     if request.method == 'POST':
@@ -270,6 +228,7 @@ def save_file(file_path, content):
         print(f"Error saving file: {e}")
         return None
 
+# Converter ficheiros para csv ou json
 def csv_to_json(uploaded_file):
     try:
         # Read the CSV data
@@ -357,8 +316,6 @@ def convertView(request):
                         # If the file was successfully saved, return the download link
                         file_name = os.path.basename(saved_file_path)
                         return JsonResponse({"download_link": saved_file_path})
-                        '''download_link = reverse('download_file', args=[file_name])
-                        return JsonResponse({"download_link": download_link})'''
                     else:
                         # Handle the case where the file couldn't be saved
                         return JsonResponse({"error": "Failed to save the file."})
@@ -367,7 +324,6 @@ def convertView(request):
                 #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
                 #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoCsv.csv")
                 save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoCsv.csv"
-                #success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
                 if result:
                     # Save the CSV data using the save_file function
@@ -479,6 +435,8 @@ def convertView(request):
 
     return render(request, 'calendario/homePage.html')
 '''
+
+# Criar novo horário
 def class_rooms(request):
     if request.method == 'POST':
         class_rooms_file = request.FILES.get('class_rooms')
@@ -503,29 +461,21 @@ def class_rooms(request):
                     csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
                     # Constrói o índice das salas
-                    #room_index = build_room_index(class_rooms_csv_data)
 
                     chosen_schedules = []
 
                     for row in csv_data[1:]:
                         try:
                             print("Linha " + str(csv_data.index(row)))
-                    # Usando DictReader para mapear o cabeçalho aos valores em cada linha
-                    #csv_reader = csv.DictReader(input_stream, delimiter=';')
 
-                    #for row in csv_data:
-                        #try:
-                            #row_without_times = [row[key] for key in header_row[:5]]
                             row_without_times = row[:6]
                             times = False
                             while times is False:
                                 start_time, end_time = get_times(row, chosen_schedules, header_row)
                                 if start_time is not None and end_time is not None:
-                                    print("Cucu com horas")
                                     times = True
 
                             row_without_times.extend([start_time, end_time])
-                            #row_without_times.extend(start_time, end_time)
                             row_without_times.extend(row[8:-3])
 
                             available = False
@@ -536,7 +486,6 @@ def class_rooms(request):
                                     available = True
                                     break  # Sair do loop quando a sala não é necessária
                                 else:
-                                    print("Eu passo-me")
                                     available_room, lotacao_room, caracteristicas_sala_dada = find_available_room(
                                         class_rooms_csv_data, row, header_row, chosen_schedules
                                     )
@@ -545,8 +494,6 @@ def class_rooms(request):
 
                             row_without_times.extend([available_room, lotacao_room, caracteristicas_sala_dada])
                             csv_writer.writerow(row_without_times)
-                            #row_without_last_three_columns.extend(available_room, lotacao_room, sala_dada)
-                            #csv_writer.writerow(row_without_last_three_columns)
 
                             chosen_schedules.append(
                         {'turma': row[header_row.index('Turma')], 'dia': row[header_row.index('Dia')], 'start_time': start_time,
@@ -608,12 +555,10 @@ def get_times(row, chosen_schedules, header_row):
                     and overlap(convert_to_time(chosen_start_minutes), end, schedule_entry['start_time'],
                                 schedule_entry['end_time'])
             ):
-                print(
-                    f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)}, Fim: {convert_to_time(chosen_end_minutes)} - Sala indisponível (sobreposição de horários).")
+                #print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)}, Fim: {convert_to_time(chosen_end_minutes)} - Sala indisponível (sobreposição de horários).")
                 return None, None
 
-        print(
-            f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
+        print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
         return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
     return None, None
@@ -628,35 +573,6 @@ def convert_to_time(minutes):
     minutes, _ = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:00"
 
-def build_room_index(class_rooms_csv_data):
-    room_index = {}
-    header_row = class_rooms_csv_data[0]
-    for room_row in class_rooms_csv_data[1:]:
-        room_id = room_row[header_row.index('Nome sala')]
-        characteristics = {}
-
-        for column in header_row:
-            if 'Arq' in column and 'Computadores' not in column:
-                characteristics[column] = room_row[header_row.index(column)]
-            elif 'Lab' in column:
-                characteristics[column] = room_row[header_row.index(column)]
-            elif 'BYOD' in column:
-                characteristics[column] = room_row[header_row.index(column)]
-            elif 'videoconferencia' in column:
-                characteristics[column] = room_row[header_row.index(column)]
-            elif 'Auditório' in column or 'auditório' in column:
-                characteristics[column] = room_row[header_row.index(column)]
-            elif 'Aulas' in column or 'aulas' in column or 'Sala' in column:
-                characteristics[column] = room_row[header_row.index(column)]
-
-
-        room_index[room_id] = {
-            'lotacao': room_row[header_row.index('Capacidade Normal')],
-            'caracteristicas': characteristics
-        }
-
-    return room_index
-
 def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules):
     day = row[header_row.index('Dia')]
     start_time = row[header_row.index('Início')]
@@ -668,8 +584,6 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
     for room_row in class_rooms_csv_data[1:]:
         room_id = room_row[header_row.index('Nome sala')]
 
-        print("Juro que estou a tentar")
-        print(sala_pedida)
         # Switch case para determinar o tipo de sala com base na sala_pedida
         if "Arq" in sala_pedida and "Computadores" not in sala_pedida:
             # Colunas que contêm "Arq"
@@ -712,7 +626,6 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
                 return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "aulas" in sala_pedida or "Aulas" in sala_pedida:
-            print("ola")
             if "Auditório" in sala_pedida:
                 feature = [col for col in header_row if 'Auditório' in col]
             elif "Anfiteatro" in sala_pedida:
@@ -730,64 +643,10 @@ def has_feature(feature, room_row, header_row):
     for column in feature:
         # Verifica se a célula contém "X"
         if room_row[header_row.index(column)] == 'X':
-            #print(header_row[column])
-            print(column)
             features.append(str(column))
     if len(features) > 0:
         return ", ".join(features)
     return None
-
-'''
-def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules, room_index):
-    day = row[header_row.index('Dia')]
-    start_time = row[header_row.index('Início')]
-    end_time = row[header_row.index('Fim')]
-    sala_pedida = row[header_row.index('Características da sala pedida para a aula')]
-    sala_pedida = sala_pedida.split(' ')
-
-    classes_header_row = class_rooms_csv_data[0]
-    for room_id, room_info in room_index.items():
-        print(f"Verificando sala {room_id}")
-        #print("Juro que estou a tentar")
-        # Verifica se a sala atende a pelo menos uma característica marcada na sala_pedida
-        characteristic_index = has_feature(sala_pedida, room_info['caracteristicas'], classes_header_row)
-        if characteristic_index is not None:
-            print("index:" + str(characteristic_index))
-        #if any(room_info['caracteristicas'].get(characteristic) == 'X' for characteristic in sala_pedida):
-            print("Há uma :0")
-
-                #print("Como assim mano")
-                        # Verifica se a sala não tem aulas no mesmo horário
-            if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-
-                print("E não tem aulas :0")
-                return room_id, room_info['lotacao'], room_info['caracteristicas']
-
-                    # Se não encontrou sala com 'X', procura por uma sala genérica
-                #print("Está crazy")
-    for room_id, room_info in room_index.items():
-        if "Arq" not in room_info['caracteristicas'] and "Lab" not in room_info['caracteristicas'] and "Auditório" not in room_info['caracteristicas']:
-            if not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
-
-                return room_id, room_info['lotacao'], room_info['caracteristicas']
-
-    return None, None, None  # Retorna None se não houver sala disponível
-
-def check_x_in_row(row):
-    for value in row:
-        if value == 'X':
-            return True  # Se encontrar 'X' em qualquer coluna, retorna True
-    return False
-
-def has_feature(features, room_row, header_row):
-    for index, column in enumerate(header_row):
-        if any(feature in column for feature in features[5:]):
-            # Verifica se a célula contém "X"
-            if room_row[index] == 'X':
-                return index
-
-    return None
-'''
 
 def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
     # Verifica se a sala está ocupada no arquivo de aulas
@@ -808,13 +667,14 @@ def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
 def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
     # Converte os tempos de string para objetos time
     start_time_1 = convert_to_minutes(start_time_1)
-    print(start_time_1)
+    #print(start_time_1)
     end_time_1 = convert_to_minutes(end_time_1)
     start_time_2 = convert_to_minutes(start_time_2)
     end_time_2 = convert_to_minutes(end_time_2)
-    print(start_time_2)
+    '''print(start_time_2)
     print(end_time_1)
     print(end_time_2)
+    '''
 
     # Verifica se há sobreposição de horários
     condition_1 = start_time_1 < start_time_2 < end_time_1
@@ -852,6 +712,7 @@ def observeCalendar(request):
     global sala_real
 
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
+
     salas_desperdicadas_list = []
     salas_sem_caracteristicas_list = []
     aulas_sobrelotadas_list = []
@@ -865,7 +726,6 @@ def observeCalendar(request):
         save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static"
         fs = FileSystemStorage(location=save_path)
         filename = fs.save(uploaded_file.name, uploaded_file)
-        #print(uploaded_file)
 
         try:
             curso_index = int(request.POST.get('curso_index'))
@@ -887,7 +747,6 @@ def observeCalendar(request):
 
 
         if uploaded_file and uploaded_file.name.endswith('.csv'):
-            #with open(uploaded_file.temporary_file_path(), 'r', encoding="UTF-8") as file:
             with io.TextIOWrapper(uploaded_file.file, encoding='UTF-8') as file:
                 csv_reader = csv.DictReader(file, delimiter=';')
                 data = [row for row in csv_reader]
@@ -900,7 +759,6 @@ def observeCalendar(request):
                 }
                 for event in events
             ]
-            #events_json = json.dumps(events)
             return render(request, 'calendario/observeCalendar.html', {'events_json': events_data})
 
     return render(request, 'calendario/observeCalendar.html')
@@ -925,7 +783,6 @@ def get_events(request):
             }
             for event in events
         ]
-        #print(events_data)
         return JsonResponse({'events_json': events_data}, safe=False)
 
     return JsonResponse({'error': 'Invalid file or file not found'}, status=400)
@@ -938,8 +795,6 @@ def process_csv_to_events(data):
     # Read CSV data and extract relevant information
     for row in data:
         # Extract fields from the CSV row
-        #print(row)
-        #title = f"{row[r'\\ufeffCurso']} - {row['Unidade de execução']}"
         title = "{} - {}".format(row.get(r'\ufeffCurso', ''), row.get('Unidade de execução', ''))
         start_time = convert_to_iso_format(f"{row['Dia']};{row['Início']}")
         end_time = convert_to_iso_format(f"{row['Dia']};{row['Fim']}")
@@ -973,38 +828,70 @@ def convert_to_iso_format(datetime_str):
         print("Invalid date/time format:", datetime_str)
         return "2024-00-00T00:00:00"
 
-def heatmap_view(request):
-    z = [[.1, .3, .5, .7, .9],
-         [1, .8, .6, .4, .2],
-         [.2, 0, .5, .7, .9],
-         [.9, .8, .4, .2, 0],
-         [.3, .4, .5, .7, 1]]
-
-    fig = px.imshow(z, text_auto=True)
-
-    graph_json = fig.to_json()
-
-    return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})
-
 import plotly.graph_objects as go
 from django.shortcuts import render
 
 def cordas_view(request):
-    fig = go.Figure(go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=["A", "B", "C", "D", "E"],
-        ),
-        link=dict(
-            source=[0, 0, 1, 1, 2, 2, 3, 3],
-            target=[2, 3, 2, 4, 3, 4, 3, 4],
-            value=[8, 4, 2, 8, 4, 2, 2, 8],
-        )
-    ))
+    cursos_list = []
+    sala_curso_dict = {}
+    if request.method == 'POST':
+        chord_file = request.FILES.get('chord_file')
 
-    fig.update_layout(title_text="Chord Diagram Example")
+        try:
+            with chord_file as input_stream:
+                csv_data = input_stream.read().decode("utf-8")
+                csv_data = [line.split(';') for line in csv_data.split('\n') if line]  #
+                header_row = csv_data[0]
+                curso_index = header_row.index("\ufeffCurso")
+                sala_index = header_row.index("Sala da aula")
+                if csv_data:
+                    for row in csv_data[1:]:
+                        try:
+                            curso = row[curso_index]
+                            sala = row[sala_index]
+
+                            new_cursos = curso.split(', ')
+
+                            for i in new_cursos:
+                                if i not in cursos_list:
+                                    cursos_list.append(i)
+                            sala_curso_dict[sala] = curso
+                        except ValueError as e:
+                            print(str(e))
+
+        except Exception as e:
+            return print(str(e))
+
+        print(cursos_list)
+        print(sala_curso_dict)
+        fig = go.Figure(go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=cursos_list,
+            ),
+            link=dict(
+                source=[0, 0, 1, 1, 2, 2, 3],
+                target=[2, 3, 2, 4, 3, 4, 4],
+                value=[8, 4, 2, 8, 4, 2, 2, 8],
+            )
+        ))
+        fig.update_layout(title_text="Chord Diagram Example")
+        graph_json = fig.to_json()
+
+    return render(request, 'calendario/cordas.html', {'graph_json':graph_json})
+
+import plotly.graph_objects as go
+
+def heatmap_view(request):
+    z = [[.1, .3, .5, .7, .9],
+                 [1, .8, .6, .4, .2],
+                 [.2, 0, .5, .7, .9],
+                 [.9, .8, .4, .2, 0],
+                 [.3, .4, .5, .7, 1]]
+
+    fig = px.imshow(z, text_auto=True)
+
     graph_json = fig.to_json()
-
-    return render(request, 'calendario/cordas.html', {'graph_json': graph_json})
+    return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})

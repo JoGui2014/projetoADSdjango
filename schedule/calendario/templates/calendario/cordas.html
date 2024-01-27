@@ -16,10 +16,7 @@
   <div id="chord-diagram"></div>
 
   <script>
-
-    var graphJSON =  graph_json|safe ;
-
-    Plotly.newPlot('chord-diagram', JSON.parse(graphJSON));
+      Plotly.newPlot('chord-diagram', JSON.parse("{{graph_json|escapejs}}"));
   </script>
 
 </body>
