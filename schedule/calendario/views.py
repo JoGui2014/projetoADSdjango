@@ -54,8 +54,9 @@ def get_information_sections(file):
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
                     nao_necessita_sala = 0
-                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    save_path = os.path.join(BASE_DIR, "schedule/calendario/static/overpopulated_classes.csv")
+                    #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/overpopulated_classes.csv")
+                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\overpopulated_classes.csv"
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow(header_row)
@@ -339,16 +340,16 @@ def download_json(file_name):
 
 def convertView(request):
     if request.method == 'POST':
-        uploaded_file = request.FILES.get('uploaded_file')  # Ensure the input field in your HTML form is named 'uploaded_file'
+        uploaded_file = request.FILES['uploaded_file']  # Ensure the input field in your HTML form is named 'uploaded_file'
         if uploaded_file:
             if uploaded_file.name.endswith(".csv"):
                 # Handle CSV to JSON conversion
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoJson.json")
-
+                    #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoJson.json")
+                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoJson.json"
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
 
@@ -363,8 +364,9 @@ def convertView(request):
                         return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoCsv.csv")
+                #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoCsv.csv")
+                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoCsv.csv"
                 #success, error = json_to_csv(uploaded_file.read().decode("utf-8"))
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
                 if result:
@@ -383,6 +385,100 @@ def convertView(request):
                     return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
     return render(request, 'calendario/homePage.html')
 
+'''
+from django.conf import settings
+
+def handle_uploaded_file(uploaded_file, conversion_type):
+    if conversion_type == 'csv_to_json':
+        # Handle CSV to JSON conversion
+        file_path = csv_to_json(uploaded_file)
+    elif conversion_type == 'json_to_csv':
+        # Handle JSON to CSV conversion
+        result = json_to_csv(uploaded_file.read().decode("utf-8"))
+        if result:
+            file_path = result
+        else:
+            return None  # Handle the case where the conversion failed
+
+    if file_path:
+
+        if conversion_type == 'csv_to_json':
+            rel_path = 'schedule/calendario/static/FicheiroConvertidoJson.json'
+        else:
+            rel_path = 'schedule/calendario/static/FicheiroConvertidoCsv.csv'
+
+        # Caminho absoluto para o arquivo
+        saved_file_path = os.path.join(settings.BASE_DIR, rel_path)
+
+        if saved_file_path:
+            return saved_file_path
+        else:
+            return None  # Handle the case where the file couldn't be saved
+    else:
+        return None  # Handle the case where the conversion failed
+
+
+def handle_remote_file(remote_file_url, conversion_type):
+    response = requests.get(remote_file_url)
+
+    if response.status_code == 200:
+        content = response.content
+
+        # Create a temporary file from the content
+        temp_file_path = create_temp_file(content)
+
+        if temp_file_path:
+            # Call the main function to handle the temporary file
+            return handle_uploaded_file(temp_file_path, conversion_type)
+        else:
+            return None  # Handle the case where creating a temporary file failed
+    else:
+        return None  # Handle the case where downloading the remote file failed
+
+
+def create_temp_file(content):
+    # Create a temporary file and write the content
+    temp_file_path = '/tmp/temp_file'  # You need to replace this with a proper temporary file path
+    with open(temp_file_path, 'wb') as temp_file:
+        temp_file.write(content)
+
+    return temp_file_path
+
+
+def convertView(request):
+    global BASE_DIR
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    if request.method == 'POST':
+        if 'uploaded_file' in request.FILES:
+            uploaded_file = request.FILES['uploaded_file']
+            if uploaded_file.name.endswith(".csv"):
+                saved_file_path = handle_uploaded_file(uploaded_file, 'csv_to_json')
+            elif uploaded_file.name.endswith(".json"):
+                saved_file_path = handle_uploaded_file(uploaded_file, 'json_to_csv')
+
+            if saved_file_path:
+                # If the file was successfully processed and saved, you can return a download link or message here
+                file_name = os.path.basename(saved_file_path)
+                return JsonResponse({"download_link": saved_file_path})
+            else:
+                # Handle the case where processing the file failed
+                return JsonResponse({"error": "Failed to process the file."})
+
+        elif 'remote_file_url' in request.POST:
+            remote_file_url = request.POST['remote_file_url']
+            saved_file_path = handle_remote_file(remote_file_url, 'csv_to_json')  # Adjust the conversion_type as needed
+
+            if saved_file_path:
+                # If the file was successfully processed and saved, you can return a download link or message here
+                file_name = os.path.basename(saved_file_path)
+                return JsonResponse({"download_link": saved_file_path})
+            else:
+                # Handle the case where processing the remote file failed
+                return JsonResponse({"error": "Failed to process the remote file."})
+
+    return render(request, 'calendario/homePage.html')
+'''
 def class_rooms(request):
     if request.method == 'POST':
         class_rooms_file = request.FILES.get('class_rooms')
@@ -400,8 +496,9 @@ def class_rooms(request):
             csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
             header_row = csv_data[0]
             if csv_data and class_rooms_csv_data:
-                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNovo.csv")
+                #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNovo.csv")
+                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
@@ -763,8 +860,9 @@ def observeCalendar(request):
 
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        save_path = os.path.join(BASE_DIR, "schedule/calendario/static/")
+        #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/")
+        save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static"
         fs = FileSystemStorage(location=save_path)
         filename = fs.save(uploaded_file.name, uploaded_file)
         #print(uploaded_file)
