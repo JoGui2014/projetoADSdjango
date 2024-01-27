@@ -27,8 +27,12 @@
         <input type="submit" Value="Ver informações">
     </form>
     <br>
-    <a href="{% url 'calendario:calculator' %}">
-        <button>Verificar novo critério de qualidade</button></a>
+    <form id="form_novo_criterio" action=" {% url 'calendario:calculator' %}" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="input_file">Selecione um ficheiro para verificar novo critério de qualidade:</label>
+        <input type="file" id="criteria_file" name="criteria_file"><br><br>
+        <input type="submit" Value="Verificar novo critério de qualidade">
+    </form>
     <br>
     <div id="calendar"></div>
     <script>
