@@ -455,7 +455,7 @@ def class_rooms(request):
             header_row = csv_data[0]
             if csv_data and class_rooms_csv_data:
                 #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNovo.csv")
+                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNov+o.csv")
                 save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=';')
@@ -538,7 +538,7 @@ def get_times(row, chosen_schedules, header_row):
         chosen_start_minutes = random.randint(start_time_minutes, end_time_minutes - 30)
 
         # Convertendo a diferença em minutos para um número de incrementos de 30 minutos
-        minute_difference = (end_time_minutes - chosen_start_minutes) // 30
+        minute_difference = (end_time_minutes - chosen_start_minutes)
 
         # Gerando um número aleatório de incrementos de 30 minutos e convertendo de volta para minutos
         duration_in_minutes = random.choice(duration[ano_letivo])
@@ -555,11 +555,13 @@ def get_times(row, chosen_schedules, header_row):
                     and overlap(convert_to_time(chosen_start_minutes), end, schedule_entry['start_time'],
                                 schedule_entry['end_time'])
             ):
-                #print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)}, Fim: {convert_to_time(chosen_end_minutes)} - Sala indisponível (sobreposição de horários).")
                 return None, None
-
-        print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
-        return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
+        if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 60
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 90
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 120
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 180):
+            print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
+            return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
     return None, None
 
@@ -570,8 +572,10 @@ def convert_to_minutes(time_string):
 
 def convert_to_time(minutes):
     hours, remainder = divmod(minutes, 60)
-    minutes, _ = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:00"
+    if remainder > 30:
+        return f"{hours:02d}:00:00"
+    else:
+        return f"{hours:02d}:30:00"
 
 def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules):
     day = row[header_row.index('Dia')]

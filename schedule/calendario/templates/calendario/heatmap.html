@@ -17,11 +17,7 @@
 <div id="heatmap"></div>
 
 <script>
-    // Parse the JSON data passed from the Django view
-    var graphJSON = graph_json|safe;
-
-    // Render the Plotly graph in the 'heatmap' div
-    Plotly.newPlot('heatmap', graphJSON.data, graphJSON.layout);
+    Plotly.newPlot('heatmap', JSON.parse("{{graph_json|escapejs}}"));
 </script>
 
 </body>
