@@ -1,4 +1,4 @@
-**Ficheiros na diretoria static:**
+**Ficheiros na diretoria *static*:**
 
 -> HorarioDeExemplo.csv
 
