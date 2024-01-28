@@ -165,7 +165,6 @@ def get_informations_for_plot(file):
 def aux_new_criteria(expressao):
     global new_criteria_file
     try:
-        print(new_criteria_file)
         csv_file_path = new_criteria_file
         with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
             csv_content = csv_file.read()
@@ -202,7 +201,7 @@ def aux_new_criteria(expressao):
                     if expression_result:
                         count += 1
                         classes_list.append(row)
-                        print(f'Expressão Avaliada: {expressao}')
+                        #print(f'Expressão Avaliada: {expressao}')
                 except Exception as e:
                     print(e)
         return count, classes_list
@@ -230,7 +229,7 @@ from django.views.decorators.csrf import csrf_exempt
 def calcular_expressao(request):
     if request.method == 'POST':
         expressao = request.POST.get('expressao', '')
-        print(expressao)
+        #print(expressao)
         count, classes_list = aux_new_criteria(expressao)
 
         return HttpResponse(str(count))
@@ -268,7 +267,7 @@ def csv_to_json(uploaded_file):
             result.append(item)
 
         # Convert the list of dictionaries to JSON
-        json_data = json.dumps(result)
+        json_data = json.dumps(result, ensure_ascii=False)
         return json_data
     except Exception as e:
         return str(e)
@@ -286,7 +285,7 @@ def json_to_csv(input_data):
 
         # Create a StringIO buffer to write CSV data
         csv_buffer = StringIO()
-        csv_writer = csv.DictWriter(csv_buffer, fieldnames=field_names)
+        csv_writer = csv.DictWriter(csv_buffer, fieldnames=field_names, delimiter=';')
 
         # Write the header row
         csv_writer.writeheader()
@@ -314,144 +313,77 @@ def download_json(file_name):
         response = FileResponse(json_file)
     return response
 
+import requests
+
 def convertView(request):
     if request.method == 'POST':
-        uploaded_file = request.FILES['uploaded_file']  # Ensure the input field in your HTML form is named 'uploaded_file'
-        if uploaded_file:
-            if uploaded_file.name.endswith(".csv"):
-                # Handle CSV to JSON conversion
+        file_source = request.POST.get('file_source', '')  # Obtém o valor do campo 'file_source'
+
+        if file_source == 'local':
+            uploaded_file = request.FILES.get('uploaded_file')
+
+            if uploaded_file and uploaded_file.name.endswith(".csv"):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
-                    # Define the desired save path for the file
                     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                     relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
                     save_path = os.path.join(BASE_DIR, relative_path)
-                    # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
 
                     if saved_file_path:
-                        # If the file was successfully saved, return the download link
                         file_name = os.path.basename(saved_file_path)
                         return JsonResponse({"download_link": saved_file_path})
                     else:
-                        # Handle the case where the file couldn't be saved
                         return JsonResponse({"error": "Failed to save the file."})
-            elif uploaded_file.name.endswith(".json"):
-                # Handle JSON to CSV conversion
+
+            elif uploaded_file and uploaded_file.name.endswith(".json"):
                 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
                 save_path = os.path.join(BASE_DIR, relative_path)
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
+
                 if result:
-                    # Save the CSV data using the save_file function
                     saved_file_path = save_file(save_path, result)
 
                     if saved_file_path:
-                        # If the file was successfully saved, you can return a download link or message here
                         file_name = os.path.basename(saved_file_path)
                         return JsonResponse({"download_link": saved_file_path})
                     else:
-                        # Handle the case where the file couldn't be saved
                         return JsonResponse({"error": "Failed to save the CSV file."})
                 else:
-                    # Handle the case where the conversion or file saving failed
                     return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
-    return render(request, 'calendario/homePage.html')
 
-'''
-from django.conf import settings
-
-def handle_uploaded_file(uploaded_file, conversion_type):
-    if conversion_type == 'csv_to_json':
-        # Handle CSV to JSON conversion
-        file_path = csv_to_json(uploaded_file)
-    elif conversion_type == 'json_to_csv':
-        # Handle JSON to CSV conversion
-        result = json_to_csv(uploaded_file.read().decode("utf-8"))
-        if result:
-            file_path = result
-        else:
-            return None  # Handle the case where the conversion failed
-
-    if file_path:
-
-        if conversion_type == 'csv_to_json':
-            rel_path = 'schedule/calendario/static/FicheiroConvertidoJson.json'
-        else:
-            rel_path = 'schedule/calendario/static/FicheiroConvertidoCsv.csv'
-
-        # Caminho absoluto para o arquivo
-        saved_file_path = os.path.join(settings.BASE_DIR, rel_path)
-
-        if saved_file_path:
-            return saved_file_path
-        else:
-            return None  # Handle the case where the file couldn't be saved
-    else:
-        return None  # Handle the case where the conversion failed
-
-
-def handle_remote_file(remote_file_url, conversion_type):
-    response = requests.get(remote_file_url)
-
-    if response.status_code == 200:
-        content = response.content
-
-        # Create a temporary file from the content
-        temp_file_path = create_temp_file(content)
-
-        if temp_file_path:
-            # Call the main function to handle the temporary file
-            return handle_uploaded_file(temp_file_path, conversion_type)
-        else:
-            return None  # Handle the case where creating a temporary file failed
-    else:
-        return None  # Handle the case where downloading the remote file failed
-
-
-def create_temp_file(content):
-    # Create a temporary file and write the content
-    temp_file_path = '/tmp/temp_file'  # You need to replace this with a proper temporary file path
-    with open(temp_file_path, 'wb') as temp_file:
-        temp_file.write(content)
-
-    return temp_file_path
-
-
-def convertView(request):
-    global BASE_DIR
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    if request.method == 'POST':
-        if 'uploaded_file' in request.FILES:
-            uploaded_file = request.FILES['uploaded_file']
-            if uploaded_file.name.endswith(".csv"):
-                saved_file_path = handle_uploaded_file(uploaded_file, 'csv_to_json')
-            elif uploaded_file.name.endswith(".json"):
-                saved_file_path = handle_uploaded_file(uploaded_file, 'json_to_csv')
-
-            if saved_file_path:
-                # If the file was successfully processed and saved, you can return a download link or message here
-                file_name = os.path.basename(saved_file_path)
-                return JsonResponse({"download_link": saved_file_path})
-            else:
-                # Handle the case where processing the file failed
-                return JsonResponse({"error": "Failed to process the file."})
-
-        elif 'remote_file_url' in request.POST:
-            remote_file_url = request.POST['remote_file_url']
-            saved_file_path = handle_remote_file(remote_file_url, 'csv_to_json')  # Adjust the conversion_type as needed
-
-            if saved_file_path:
-                # If the file was successfully processed and saved, you can return a download link or message here
-                file_name = os.path.basename(saved_file_path)
-                return JsonResponse({"download_link": saved_file_path})
-            else:
-                # Handle the case where processing the remote file failed
-                return JsonResponse({"error": "Failed to process the remote file."})
-
-    return render(request, 'calendario/homePage.html')
-'''
+        elif file_source == 'remote':
+            file_url = request.POST.get('file_url', '')
+            if file_url:
+                # Verifique se o URL termina com .csv ou .json
+                if file_url.lower().endswith(('.csv', '.json')):
+                    response = requests.get(file_url)
+                    if response.status_code == 200:
+                        file_content = response.content
+                        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        if file_url.lower().endswith('.csv'):
+                            # Se o URL termina com .csv, processe como CSV
+                            relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
+                            result = csv_to_json(io.BytesIO(file_content))
+                        else:
+                            # Se o URL termina com .json, processe como JSON
+                            relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
+                            result = json_to_csv(file_content)
+                        save_path = os.path.join(BASE_DIR, relative_path)
+                        if result:
+                            saved_file_path = save_file(save_path, result)
+                            if saved_file_path:
+                                file_name = os.path.basename(saved_file_path)
+                                return JsonResponse({"download_link": saved_file_path})
+                            else:
+                                 return JsonResponse({"error": "Failed to save the file."})
+                        else:
+                            return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
+                    else:
+                        return JsonResponse({"error": f"Failed to download the file from the provided URL. Status code: {response.status_code}"})
+                else:
+                    return JsonResponse({"error": "Unsupported file type in URL."})
 
 # Criar novo horário
 def class_rooms(request):
@@ -484,7 +416,7 @@ def class_rooms(request):
 
                     for row in csv_data[1:]:
                         try:
-                            print("Linha " + str(csv_data.index(row)))
+                            #print("Linha " + str(csv_data.index(row)))
 
                             row_without_times = row[:6]
                             times = False
@@ -577,7 +509,8 @@ def get_times(row, chosen_schedules, header_row):
         if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 60
                 or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 90
                 or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 120
-                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180):
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180)\
+                and (convert_to_minutes(convert_to_time(chosen_end_minutes)) < 1350):
             print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
             return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
@@ -614,10 +547,6 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
                 return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "Lab ISTA" in sala_pedida:
-            '''if "electr" in aula.lower():
-                print(aula)
-                feature = [col for col in header_row if 'Laboratório de Electrónica' in col]
-            '''
             if "Jornalismo" in sala_pedida:
                 feature = [col for col in header_row if 'Jornalismo' in col]
             else:
@@ -681,22 +610,17 @@ def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
                 and overlap(start_time, end_time, schedule_entry['start_time'],
                             schedule_entry['end_time'])
         ):
-            print("Sala " + room_id + " ocupada.")
+            #print("Sala " + room_id + " ocupada.")
             return True  # A sala está ocupada
-    print("Sala " + room_id + " disponível.")
+    #print("Sala " + room_id + " disponível.")
     return False  # A sala está disponível
 
 def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
     # Converte os tempos de string para objetos time
     start_time_1 = convert_to_minutes(start_time_1)
-    #print(start_time_1)
     end_time_1 = convert_to_minutes(end_time_1)
     start_time_2 = convert_to_minutes(start_time_2)
     end_time_2 = convert_to_minutes(end_time_2)
-    '''print(start_time_2)
-    print(end_time_1)
-    print(end_time_2)
-    '''
 
     # Verifica se há sobreposição de horários
     condition_1 = start_time_1 < start_time_2 < end_time_1
@@ -705,13 +629,6 @@ def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
     condition_4 = start_time_2 < end_time_1 < end_time_2
 
     return condition_1 or condition_2 or condition_3 or condition_4
-
-'''
-def save_file(save_path, file_content):
-    with open(save_path, 'w', encoding='utf-8') as file:
-        file.write(file_content)
-    return save_path
-'''
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -852,18 +769,24 @@ def convert_to_iso_format(datetime_str):
     else:
         # Handle the case when either day or time is missing
         # You might want to customize this part based on your requirements
-        print("Invalid date/time format:", datetime_str)
+        #print("Invalid date/time format:", datetime_str)
         return "2024-00-00T00:00:00"
 
 import plotly.graph_objects as go
 from django.shortcuts import render
+from itertools import combinations
 
 def cordas_view(request):
     cursos_list = []
     sala_curso_dict = {}
+    source_cursos = []
+    target_cursos = []
+    sala_values = []
+    sala_labels = []
     if request.method == 'POST':
         chord_file = request.FILES.get('chord_file')
-
+        if not chord_file.name.endswith('.csv'):
+            return HttpResponse("Por favor introduza um ficheiro csv válido.")
         try:
             with chord_file as input_stream:
                 csv_data = input_stream.read().decode("utf-8")
@@ -882,43 +805,110 @@ def cordas_view(request):
                             for i in new_cursos:
                                 if i not in cursos_list:
                                     cursos_list.append(i)
+
+                            if sala not in sala_labels:
+                                sala_labels.append(sala)
+
                             sala_curso_dict[sala] = curso
                         except ValueError as e:
                             print(str(e))
 
         except Exception as e:
             return print(str(e))
+        for sala, cursos in sala_curso_dict.items():
+            cursos_conjunto = cursos.split(', ')  # Assuming the cursos values are separated by commas and spaces
+            if len(cursos_conjunto) > 1:
+                if len(cursos_conjunto) == 2:
+                    curso1_index = cursos_list.index(cursos_conjunto[0])
+                    curso2_index = cursos_list.index(cursos_conjunto[1])
+                    source_cursos.append(curso1_index)
+                    target_cursos.append(curso2_index)
+                    sala_index = sala_labels.index(sala)
+                    sala_values.append(sala_index)
+                else:
+                    unique_combinations = set(combinations(cursos_conjunto, 2))
+                    for comb in unique_combinations:
+                        curso1_index = cursos_list.index(comb[0])
+                        curso2_index = cursos_list.index(comb[1])
+                        source_cursos.append(curso1_index)
+                        target_cursos.append(curso2_index)
+                        sala_index = sala_labels.index(sala)
+                        sala_values.append(sala_index)
 
-        print(cursos_list)
-        print(sala_curso_dict)
         fig = go.Figure(go.Sankey(
             node=dict(
-                pad=15,
-                thickness=20,
+                pad=100,
+                thickness=25,
                 line=dict(color="black", width=0.5),
                 label=cursos_list,
             ),
             link=dict(
-                source=[0, 0, 1, 1, 2, 2, 3],
-                target=[2, 3, 2, 4, 3, 4, 4],
-                value=[8, 4, 2, 8, 4, 2, 2, 8],
-            )
+                source=source_cursos,
+                target=target_cursos,
+                value=sala_values,
+                customdata=[sala_labels[sala_index] for sala_index in sala_values],  # Include sala names in customdata
+                hovertemplate='Source: %{source.label}<br>Target: %{target.label}<br>Sala: %{customdata}',
+                # Customize hover information
+                color='rgba(30,144,255,0.5)',
+            ),
+            arrangement = 'freeform',
         ))
-        fig.update_layout(title_text="Chord Diagram Example")
+
+
+        fig.update_layout(title_text="Diagrama de Cordas referente ao horário:")
         graph_json = fig.to_json()
 
-    return render(request, 'calendario/cordas.html', {'graph_json':graph_json})
+    return render(request, 'calendario/cordas.html', {'graph_json': graph_json})
 
 import plotly.graph_objects as go
+import plotly.express as px
 
 def heatmap_view(request):
-    z = [[.1, .3, .5, .7, .9],
-                 [1, .8, .6, .4, .2],
-                 [.2, 0, .5, .7, .9],
-                 [.9, .8, .4, .2, 0],
-                 [.3, .4, .5, .7, 1]]
+    data = []
+    x = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+    y = ['08:00:00', '08:30:00', '09:00:00', '09:30:00', '10:00:00', '10:30:00', '11:00:00', '11:30:00', '12:00:00', '12:30:00', '13:00:00', '13:30:00', '14:00:00', '14:30:00', '15:00:00', '15:30:00', '16:00:00', '16:30:00', '17:00:00', '17:30:00', '18:00:00', '18:30:00', '19:00:00', '19:30:00', '20:00:00', '20:30:00', '21:00:00', '21:30:00', '22:00:00', '22:30:00']
 
-    fig = px.imshow(z, text_auto=True)
+    for day in x:
+        row = []
+        for interval in y:
+            row.append(0)
+        data.append(row)
+
+    if request.method == 'POST':
+        file = request.FILES.get('heatmap_file')
+
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Por favor introduza um ficheiro csv válido.")
+
+    with file as file_input:
+        file_csv_data = file_input.read().decode("utf-8")
+        file_csv_data = [line.split(';') for line in file_csv_data.split('\n') if line]
+        header_row = file_csv_data[0]
+        for row in file_csv_data[1:]:
+            start = row[header_row.index('Início')]
+            end = row[header_row.index('Fim')]
+            diaDaSemana = row[header_row.index('Dia da Semana')]
+            start_index = y.index(start)
+            end_index = y.index(end)
+
+            for i, interval in enumerate(y[:-1]):
+                if start_index <= i <= end_index:
+                    data[x.index(diaDaSemana)][i] += 1
+
+    data = [list(row) for row in zip(*data)]
+
+    layout = dict(
+        height=900,
+        width=1700,
+        title="Mapa de Calor de Horas da semana:",
+        xaxis=dict(title="Dia da Semana"),
+        yaxis=dict(title="Hora"),
+        scene=dict(aspectmode="manual", aspectratio=dict(x=2.5, y=1, z=1))
+    )
+
+    # Create a heatmap figure
+    fig = go.Figure(go.Heatmap(z=data, x=x, y=y))
+    fig.update_layout(layout)
 
     graph_json = fig.to_json()
     return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})
