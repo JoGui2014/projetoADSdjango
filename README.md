@@ -15,10 +15,6 @@
 -> HorarioNovo.csv (último ficheiro de criação de horário)
 
 
-**Instruções para a execução do projeto:**
-
-
-
 **Projeto realizado por:**
 
 -> Daniel Morgado nº98598
