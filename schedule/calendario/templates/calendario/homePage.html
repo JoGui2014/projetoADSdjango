@@ -99,6 +99,33 @@
     <input type="submit" value="Visualizar">
 </form>
 <hr>
+<h1>Comparar Horários</h1>
+
+    <form id="fileForm" action="{% url 'calendario:compare' %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+        <button type="button" onclick="addFileInput()">Adicionar outro horário</button>
+        <input type="submit" value="Visualizar">
+        <br><br>
+        <input type="file" name="fileInput" id="fileInput">
+    </form>
+
+    <script>
+        function addFileInput() {
+            // Create a new file input element
+
+            var newFileInput = document.createElement("input");
+            newFileInput.type = "file";
+            newFileInput.name = "fileInput";
+
+            // Append the new file input to the form
+            document.getElementById("fileForm").appendChild(newFileInput);
+            document.getElementById("fileForm").appendChild(document.createElement("br"));
+            document.getElementById("fileForm").appendChild(newFileInput);
+            document.getElementById("fileForm").appendChild(document.createElement("br"));
+            document.getElementById("fileForm").appendChild(newFileInput);
+        }
+    </script>
+<hr>
 <h1>Visualizar Heatmap</h1>
 <p>Selecione ficheiro de aulas, em formato csv:</p>
 <form method="post" action="{% url 'calendario:heatmap' %}" enctype="multipart/form-data">
