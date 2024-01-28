@@ -746,7 +746,7 @@ def observeCalendar(request):
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        relative_path = os.path.join('calendario', 'static', 'HorarioUpload.csv')
+        relative_path = os.path.join('calendario', 'static')
         save_path = os.path.join(BASE_DIR, relative_path)
         fs = FileSystemStorage(location=save_path)
         filename = fs.save(uploaded_file.name, uploaded_file)
