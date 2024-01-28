@@ -2,10 +2,9 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Calendário</title>
+    <title>Visualizar Calendário</title>
     <style>
         html, body {
-            margin: 0;
             padding: 0;
             font-family: Arial, Helvetica Neue, Helvetica, sans-serif;
             font-size: 14px;
@@ -22,14 +21,14 @@
    <h1>Critérios de qualidade</h1>
     <form id="form_criterios_qualidade" action=" {% url 'calendario:get_informations' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="input_file">Selecione um ficheiro para ver os seus critérios de qualidade:</label>
+        <label for="input_file"> Selecione um ficheiro para ver os seus critérios de qualidade:</label>
         <input type="file" id="input_file" name="input_file"><br><br>
         <input type="submit" Value="Ver informações">
     </form>
     <br>
     <form id="form_novo_criterio" action=" {% url 'calendario:calculator' %}" method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        <label for="input_file">Selecione um ficheiro para verificar novo critério de qualidade:</label>
+        <label for="input_file"> Selecione um ficheiro para verificar novo critério de qualidade:</label>
         <input type="file" id="criteria_file" name="criteria_file"><br><br>
         <input type="submit" Value="Verificar novo critério de qualidade">
     </form>

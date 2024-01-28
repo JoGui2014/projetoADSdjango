@@ -165,7 +165,6 @@ def get_informations_for_plot(file):
 def aux_new_criteria(expressao):
     global new_criteria_file
     try:
-        print(new_criteria_file)
         csv_file_path = new_criteria_file
         with open(csv_file_path, 'r', encoding='utf-8') as csv_file:
             csv_content = csv_file.read()
@@ -202,7 +201,7 @@ def aux_new_criteria(expressao):
                     if expression_result:
                         count += 1
                         classes_list.append(row)
-                        print(f'Expressão Avaliada: {expressao}')
+                        #print(f'Expressão Avaliada: {expressao}')
                 except Exception as e:
                     print(e)
         return count, classes_list
@@ -230,7 +229,7 @@ from django.views.decorators.csrf import csrf_exempt
 def calcular_expressao(request):
     if request.method == 'POST':
         expressao = request.POST.get('expressao', '')
-        print(expressao)
+        #print(expressao)
         count, classes_list = aux_new_criteria(expressao)
 
         return HttpResponse(str(count))
@@ -382,8 +381,7 @@ def convertView(request):
                         else:
                             return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
                     else:
-                        return JsonResponse({
-                                                "error": f"Failed to download the file from the provided URL. Status code: {response.status_code}"})
+                        return JsonResponse({"error": f"Failed to download the file from the provided URL. Status code: {response.status_code}"})
                 else:
                     return JsonResponse({"error": "Unsupported file type in URL."})
 
@@ -418,7 +416,7 @@ def class_rooms(request):
 
                     for row in csv_data[1:]:
                         try:
-                            print("Linha " + str(csv_data.index(row)))
+                            #print("Linha " + str(csv_data.index(row)))
 
                             row_without_times = row[:6]
                             times = False
@@ -511,7 +509,8 @@ def get_times(row, chosen_schedules, header_row):
         if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 60
                 or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 90
                 or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 120
-                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180):
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180)\
+                and (convert_to_minutes(convert_to_time(chosen_end_minutes)) < 1350):
             print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
             return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
@@ -548,10 +547,6 @@ def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules)
             if caracteristicas_sala_dada is not None and not room_has_class(chosen_schedules, room_id, day, start_time, end_time):
                 return room_id, room_row[header_row.index('Capacidade Normal')], caracteristicas_sala_dada
         elif "Lab ISTA" in sala_pedida:
-            '''if "electr" in aula.lower():
-                print(aula)
-                feature = [col for col in header_row if 'Laboratório de Electrónica' in col]
-            '''
             if "Jornalismo" in sala_pedida:
                 feature = [col for col in header_row if 'Jornalismo' in col]
             else:
@@ -615,22 +610,17 @@ def room_has_class(chosen_schedules, room_id, day, start_time, end_time):
                 and overlap(start_time, end_time, schedule_entry['start_time'],
                             schedule_entry['end_time'])
         ):
-            print("Sala " + room_id + " ocupada.")
+            #print("Sala " + room_id + " ocupada.")
             return True  # A sala está ocupada
-    print("Sala " + room_id + " disponível.")
+    #print("Sala " + room_id + " disponível.")
     return False  # A sala está disponível
 
 def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
     # Converte os tempos de string para objetos time
     start_time_1 = convert_to_minutes(start_time_1)
-    #print(start_time_1)
     end_time_1 = convert_to_minutes(end_time_1)
     start_time_2 = convert_to_minutes(start_time_2)
     end_time_2 = convert_to_minutes(end_time_2)
-    '''print(start_time_2)
-    print(end_time_1)
-    print(end_time_2)
-    '''
 
     # Verifica se há sobreposição de horários
     condition_1 = start_time_1 < start_time_2 < end_time_1
@@ -639,13 +629,6 @@ def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
     condition_4 = start_time_2 < end_time_1 < end_time_2
 
     return condition_1 or condition_2 or condition_3 or condition_4
-
-'''
-def save_file(save_path, file_content):
-    with open(save_path, 'w', encoding='utf-8') as file:
-        file.write(file_content)
-    return save_path
-'''
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -786,7 +769,7 @@ def convert_to_iso_format(datetime_str):
     else:
         # Handle the case when either day or time is missing
         # You might want to customize this part based on your requirements
-        print("Invalid date/time format:", datetime_str)
+        #print("Invalid date/time format:", datetime_str)
         return "2024-00-00T00:00:00"
 
 import plotly.graph_objects as go
@@ -802,7 +785,8 @@ def cordas_view(request):
     sala_labels = []
     if request.method == 'POST':
         chord_file = request.FILES.get('chord_file')
-
+        if not chord_file.name.endswith('.csv'):
+            return HttpResponse("Por favor introduza um ficheiro csv válido.")
         try:
             with chord_file as input_stream:
                 csv_data = input_stream.read().decode("utf-8")
@@ -877,15 +861,54 @@ def cordas_view(request):
     return render(request, 'calendario/cordas.html', {'graph_json': graph_json})
 
 import plotly.graph_objects as go
+import plotly.express as px
 
 def heatmap_view(request):
-    z = [[.1, .3, .5, .7, .9],
-                 [1, .8, .6, .4, .2],
-                 [.2, 0, .5, .7, .9],
-                 [.9, .8, .4, .2, 0],
-                 [.3, .4, .5, .7, 1]]
+    data = []
+    x = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+    y = ['08:00:00', '08:30:00', '09:00:00', '09:30:00', '10:00:00', '10:30:00', '11:00:00', '11:30:00', '12:00:00', '12:30:00', '13:00:00', '13:30:00', '14:00:00', '14:30:00', '15:00:00', '15:30:00', '16:00:00', '16:30:00', '17:00:00', '17:30:00', '18:00:00', '18:30:00', '19:00:00', '19:30:00', '20:00:00', '20:30:00', '21:00:00', '21:30:00', '22:00:00', '22:30:00']
 
-    fig = px.imshow(z, text_auto=True)
+    for day in x:
+        row = []
+        for interval in y:
+            row.append(0)
+        data.append(row)
+
+    if request.method == 'POST':
+        file = request.FILES.get('heatmap_file')
+
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Por favor introduza um ficheiro csv válido.")
+
+    with file as file_input:
+        file_csv_data = file_input.read().decode("utf-8")
+        file_csv_data = [line.split(';') for line in file_csv_data.split('\n') if line]
+        header_row = file_csv_data[0]
+        for row in file_csv_data[1:]:
+            start = row[header_row.index('Início')]
+            end = row[header_row.index('Fim')]
+            diaDaSemana = row[header_row.index('Dia da Semana')]
+            start_index = y.index(start)
+            end_index = y.index(end)
+
+            for i, interval in enumerate(y[:-1]):
+                if start_index <= i <= end_index:
+                    data[x.index(diaDaSemana)][i] += 1
+
+    data = [list(row) for row in zip(*data)]
+
+    layout = dict(
+        height=900,
+        width=1700,
+        title="Mapa de Calor de Horas da semana:",
+        xaxis=dict(title="Dia da Semana"),
+        yaxis=dict(title="Hora"),
+        scene=dict(aspectmode="manual", aspectratio=dict(x=2.5, y=1, z=1))
+    )
+
+    # Create a heatmap figure
+    fig = go.Figure(go.Heatmap(z=data, x=x, y=y))
+    fig.update_layout(layout)
 
     graph_json = fig.to_json()
     return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})

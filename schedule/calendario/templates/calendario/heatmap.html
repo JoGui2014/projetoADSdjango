@@ -3,21 +3,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Heatmap with Form</title>
+    <title>Heatmap referente ao horário</title>
+    <h2>Heatmap referente ao horário</h2>
+    <p>Nota: z = nº de aulas a essa hora!</p>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
-<form method="post" action="{% url 'calendario:heatmap' %}">
-    {% csrf_token %}
-    {{ form }}
-    <button type="submit">Generate Heatmap</button>
-</form>
-
 <div id="heatmap"></div>
 
 <script>
-    Plotly.newPlot('heatmap', JSON.parse("{{graph_json|escapejs}}"));
+    var data = JSON.parse("{{graph_json|escapejs}}");
+
+    // Set the layout properties to adjust the size of the heatmap
+    var layout = {
+        height: 800,  // Set the desired height in pixels
+        width: 1600,  // Set the desired width in pixels
+        title: 'Your Heatmap Title',  // Set your heatmap title here
+        xaxis: {
+            title: 'Day of Week'
+        },
+        yaxis: {
+            title: 'Time of Day'
+        }
+    };
+
+    // Render the Plotly graph in the 'heatmap' div with the specified layout
+    Plotly.newPlot('heatmap', data, layout);
 </script>
 
 </body>
