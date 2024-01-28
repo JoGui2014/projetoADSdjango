@@ -387,147 +387,6 @@ def convertView(request):
                 else:
                     return JsonResponse({"error": "Unsupported file type in URL."})
 
-
-#Apagar
-def convertView1(request):
-    if request.method == 'POST':
-        uploaded_file = request.FILES['uploaded_file']  # Ensure the input field in your HTML form is named 'uploaded_file'
-        if uploaded_file:
-            if uploaded_file.name.endswith(".csv"):
-                # Handle CSV to JSON conversion
-                file_path = csv_to_json(uploaded_file)
-                if file_path:
-                    # Define the desired save path for the file
-                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
-                    save_path = os.path.join(BASE_DIR, relative_path)
-                    # Save the file using the save_file function
-                    saved_file_path = save_file(save_path, file_path)
-
-                    if saved_file_path:
-                        # If the file was successfully saved, return the download link
-                        file_name = os.path.basename(saved_file_path)
-                        return JsonResponse({"download_link": saved_file_path})
-                    else:
-                        # Handle the case where the file couldn't be saved
-                        return JsonResponse({"error": "Failed to save the file."})
-            elif uploaded_file.name.endswith(".json"):
-                # Handle JSON to CSV conversion
-                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
-                save_path = os.path.join(BASE_DIR, relative_path)
-                result = json_to_csv(uploaded_file.read().decode("utf-8"))
-                if result:
-                    # Save the CSV data using the save_file function
-                    saved_file_path = save_file(save_path, result)
-
-                    if saved_file_path:
-                        # If the file was successfully saved, you can return a download link or message here
-                        file_name = os.path.basename(saved_file_path)
-                        return JsonResponse({"download_link": saved_file_path})
-                    else:
-                        # Handle the case where the file couldn't be saved
-                        return JsonResponse({"error": "Failed to save the CSV file."})
-                else:
-                    # Handle the case where the conversion or file saving failed
-                    return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
-    return render(request, 'calendario/homePage.html')
-
-'''
-from django.conf import settings
-
-def handle_uploaded_file(uploaded_file, conversion_type):
-    if conversion_type == 'csv_to_json':
-        # Handle CSV to JSON conversion
-        file_path = csv_to_json(uploaded_file)
-    elif conversion_type == 'json_to_csv':
-        # Handle JSON to CSV conversion
-        result = json_to_csv(uploaded_file.read().decode("utf-8"))
-        if result:
-            file_path = result
-        else:
-            return None  # Handle the case where the conversion failed
-
-    if file_path:
-
-        if conversion_type == 'csv_to_json':
-            rel_path = 'schedule/calendario/static/FicheiroConvertidoJson.json'
-        else:
-            rel_path = 'schedule/calendario/static/FicheiroConvertidoCsv.csv'
-
-        # Caminho absoluto para o arquivo
-        saved_file_path = os.path.join(settings.BASE_DIR, rel_path)
-
-        if saved_file_path:
-            return saved_file_path
-        else:
-            return None  # Handle the case where the file couldn't be saved
-    else:
-        return None  # Handle the case where the conversion failed
-
-
-def handle_remote_file(remote_file_url, conversion_type):
-    response = requests.get(remote_file_url)
-
-    if response.status_code == 200:
-        content = response.content
-
-        # Create a temporary file from the content
-        temp_file_path = create_temp_file(content)
-
-        if temp_file_path:
-            # Call the main function to handle the temporary file
-            return handle_uploaded_file(temp_file_path, conversion_type)
-        else:
-            return None  # Handle the case where creating a temporary file failed
-    else:
-        return None  # Handle the case where downloading the remote file failed
-
-
-def create_temp_file(content):
-    # Create a temporary file and write the content
-    temp_file_path = '/tmp/temp_file'  # You need to replace this with a proper temporary file path
-    with open(temp_file_path, 'wb') as temp_file:
-        temp_file.write(content)
-
-    return temp_file_path
-
-
-def convertView(request):
-    global BASE_DIR
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    if request.method == 'POST':
-        if 'uploaded_file' in request.FILES:
-            uploaded_file = request.FILES['uploaded_file']
-            if uploaded_file.name.endswith(".csv"):
-                saved_file_path = handle_uploaded_file(uploaded_file, 'csv_to_json')
-            elif uploaded_file.name.endswith(".json"):
-                saved_file_path = handle_uploaded_file(uploaded_file, 'json_to_csv')
-
-            if saved_file_path:
-                # If the file was successfully processed and saved, you can return a download link or message here
-                file_name = os.path.basename(saved_file_path)
-                return JsonResponse({"download_link": saved_file_path})
-            else:
-                # Handle the case where processing the file failed
-                return JsonResponse({"error": "Failed to process the file."})
-
-        elif 'remote_file_url' in request.POST:
-            remote_file_url = request.POST['remote_file_url']
-            saved_file_path = handle_remote_file(remote_file_url, 'csv_to_json')  # Adjust the conversion_type as needed
-
-            if saved_file_path:
-                # If the file was successfully processed and saved, you can return a download link or message here
-                file_name = os.path.basename(saved_file_path)
-                return JsonResponse({"download_link": saved_file_path})
-            else:
-                # Handle the case where processing the remote file failed
-                return JsonResponse({"error": "Failed to process the remote file."})
-
-    return render(request, 'calendario/homePage.html')
-'''
-
 # Criar novo horário
 def class_rooms(request):
     if request.method == 'POST':
@@ -932,10 +791,15 @@ def convert_to_iso_format(datetime_str):
 
 import plotly.graph_objects as go
 from django.shortcuts import render
+from itertools import combinations
 
 def cordas_view(request):
     cursos_list = []
     sala_curso_dict = {}
+    source_cursos = []
+    target_cursos = []
+    sala_values = []
+    sala_labels = []
     if request.method == 'POST':
         chord_file = request.FILES.get('chord_file')
 
@@ -957,32 +821,60 @@ def cordas_view(request):
                             for i in new_cursos:
                                 if i not in cursos_list:
                                     cursos_list.append(i)
+
+                            if sala not in sala_labels:
+                                sala_labels.append(sala)
+
                             sala_curso_dict[sala] = curso
                         except ValueError as e:
                             print(str(e))
 
         except Exception as e:
             return print(str(e))
+        for sala, cursos in sala_curso_dict.items():
+            cursos_conjunto = cursos.split(', ')  # Assuming the cursos values are separated by commas and spaces
+            if len(cursos_conjunto) > 1:
+                if len(cursos_conjunto) == 2:
+                    curso1_index = cursos_list.index(cursos_conjunto[0])
+                    curso2_index = cursos_list.index(cursos_conjunto[1])
+                    source_cursos.append(curso1_index)
+                    target_cursos.append(curso2_index)
+                    sala_index = sala_labels.index(sala)
+                    sala_values.append(sala_index)
+                else:
+                    unique_combinations = set(combinations(cursos_conjunto, 2))
+                    for comb in unique_combinations:
+                        curso1_index = cursos_list.index(comb[0])
+                        curso2_index = cursos_list.index(comb[1])
+                        source_cursos.append(curso1_index)
+                        target_cursos.append(curso2_index)
+                        sala_index = sala_labels.index(sala)
+                        sala_values.append(sala_index)
 
-        print(cursos_list)
-        print(sala_curso_dict)
         fig = go.Figure(go.Sankey(
             node=dict(
-                pad=15,
-                thickness=20,
+                pad=100,
+                thickness=25,
                 line=dict(color="black", width=0.5),
                 label=cursos_list,
             ),
             link=dict(
-                source=[0, 0, 1, 1, 2, 2, 3],
-                target=[2, 3, 2, 4, 3, 4, 4],
-                value=[8, 4, 2, 8, 4, 2, 2, 8],
-            )
+                source=source_cursos,
+                target=target_cursos,
+                value=sala_values,
+                customdata=[sala_labels[sala_index] for sala_index in sala_values],  # Include sala names in customdata
+                hovertemplate='Source: %{source.label}<br>Target: %{target.label}<br>Sala: %{customdata}',
+                # Customize hover information
+                color='rgba(30,144,255,0.5)',
+            ),
+            arrangement = 'freeform',
         ))
-        fig.update_layout(title_text="Chord Diagram Example")
+
+
+        fig.update_layout(title_text="Diagrama de Cordas referente ao horário:")
         graph_json = fig.to_json()
 
-    return render(request, 'calendario/cordas.html', {'graph_json':graph_json})
+    return render(request, 'calendario/cordas.html', {'graph_json': graph_json})
 
 import plotly.graph_objects as go
 
