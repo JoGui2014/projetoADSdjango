@@ -144,6 +144,22 @@ def get_informations(request):
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
 
+def get_informations_for_plot(file):
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Por favor introduza um ficheiro CSV")
+
+    try:
+        result = get_information_sections(file)
+        if result is None:
+            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
+
+        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
+        return number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
+
+    except FileNotFoundError or Exception as e:
+        return HttpResponse(str(e))
+
+
 # Verificar novo critério de qualidade
 def aux_new_criteria(expressao):
     global new_criteria_file
@@ -456,7 +472,12 @@ def class_rooms(request):
             if csv_data and class_rooms_csv_data:
                 #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNov+o.csv")
-                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
+                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                # Construir caminho relativo a partir de BASE_DIR
+                relative_path = os.path.join('schedule', 'calendario', 'static', 'HorarioNovo.csv')
+                save_path = os.path.join(BASE_DIR, relative_path)
+
+                #save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
@@ -556,10 +577,10 @@ def get_times(row, chosen_schedules, header_row):
                                 schedule_entry['end_time'])
             ):
                 return None, None
-        if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 60
-                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 90
-                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 120
-                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) is 180):
+        if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 60
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 90
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 120
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180):
             print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
             return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
@@ -688,10 +709,12 @@ def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
 
     return condition_1 or condition_2 or condition_3 or condition_4
 
+'''
 def save_file(save_path, file_content):
     with open(save_path, 'w', encoding='utf-8') as file:
         file.write(file_content)
     return save_path
+'''
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -760,6 +783,7 @@ def observeCalendar(request):
                     'title': event['title'],
                     'start': event['start_time'],
                     'end': event['end_time'],
+                    'quality': event['quality']
                 }
                 for event in events
             ]
