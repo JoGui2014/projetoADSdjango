@@ -4,14 +4,58 @@
 <title>Calendar</title>
 </head>
 <body>
+<h1>Escolha um ficheiro de Horários, para converter em ficheiro csv ou json</h1>
+<form id="schedule_form" action="{% url 'calendario:convertView' %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
 
-    <h1>Escolha um ficheiro de Horários, para converter em ficheiro csv ou json</h1>
-    <form id="schedule_form" action=" {% url 'calendario:convertView' %}" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        <label for="uploaded_file">Selecionar ficheiro:</label>
-        <input type="file" id="uploaded_file" name="uploaded_file"><br><br>
-        <input type="submit" value="Submeter" name="submeter">
-    </form>
+    <!-- Escolha entre enviar arquivo local ou fornecer URL -->
+    <label for="file_source">Escolha a origem do ficheiro:</label><br>
+    <select id="file_source" name="file_source" onchange="toggleFileInput()">
+        <option value="local" selected>Ficheiro Local</option>
+        <option value="remote">URL Remoto</option>
+    </select><br><br>
+
+    <!-- Campo para upload de arquivo local -->
+    <label for="uploaded_file" id="uploaded_file_label">Selecionar ficheiro local:</label>
+    <input type="file" id="uploaded_file" name="uploaded_file"><br><br>
+
+    <!-- Campo para fornecer URL remoto -->
+    <label for="file_url" style="display: none;">Selecionar URL remoto:</label>
+    <input type="text" id="file_url" name="file_url" style="display: none; width: 700px;"><br><br>
+
+    <input type="submit" value="Submeter" name="submeter">
+</form>
+
+<script>
+
+    // Função para alternar entre os campos de entrada com base na escolha do usuário
+    function toggleFileInput() {
+        var fileSource = document.getElementById('file_source').value;
+        var uploadedFileLabel = document.getElementById('uploaded_file_label');
+        var uploadedFile = document.getElementById('uploaded_file')
+        var fileUrlLabel = document.querySelector('label[for="file_url"]');
+        var fileUrlInput = document.getElementById('file_url');
+
+        localStorage.setItem('fileSource', fileSource);
+
+        if (fileSource === 'local') {
+            uploadedFileLabel.style.display = 'block';
+            fileUrlInput.style.display = 'none';
+            fileUrlLabel.style.display = 'none';
+            uploadedFile.style.display = 'block';
+            uploadedFile.disabled = false;
+        } else if (fileSource === 'remote') {
+            uploadedFileLabel.style.display = 'none';
+            fileUrlLabel.style.display = 'block';
+            fileUrlInput.style.display = 'block';
+            uploadedFile.style.display = 'none';
+            uploadedFile.disabled = true;
+        }
+    }
+
+
+</script>
+
 
     <h1>Criar novo horário</h1>
     <form action=" {% url 'calendario:class_rooms' %}" method="post" enctype="multipart/form-data">

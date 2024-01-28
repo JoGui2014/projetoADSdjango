@@ -268,7 +268,7 @@ def csv_to_json(uploaded_file):
             result.append(item)
 
         # Convert the list of dictionaries to JSON
-        json_data = json.dumps(result)
+        json_data = json.dumps(result, ensure_ascii=False)
         return json_data
     except Exception as e:
         return str(e)
@@ -286,7 +286,7 @@ def json_to_csv(input_data):
 
         # Create a StringIO buffer to write CSV data
         csv_buffer = StringIO()
-        csv_writer = csv.DictWriter(csv_buffer, fieldnames=field_names)
+        csv_writer = csv.DictWriter(csv_buffer, fieldnames=field_names, delimiter=';')
 
         # Write the header row
         csv_writer.writeheader()
@@ -314,7 +314,82 @@ def download_json(file_name):
         response = FileResponse(json_file)
     return response
 
+import requests
+
 def convertView(request):
+    if request.method == 'POST':
+        file_source = request.POST.get('file_source', '')  # Obtém o valor do campo 'file_source'
+
+        if file_source == 'local':
+            uploaded_file = request.FILES.get('uploaded_file')
+
+            if uploaded_file and uploaded_file.name.endswith(".csv"):
+                file_path = csv_to_json(uploaded_file)
+                if file_path:
+                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
+                    save_path = os.path.join(BASE_DIR, relative_path)
+                    saved_file_path = save_file(save_path, file_path)
+
+                    if saved_file_path:
+                        file_name = os.path.basename(saved_file_path)
+                        return JsonResponse({"download_link": saved_file_path})
+                    else:
+                        return JsonResponse({"error": "Failed to save the file."})
+
+            elif uploaded_file and uploaded_file.name.endswith(".json"):
+                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
+                save_path = os.path.join(BASE_DIR, relative_path)
+                result = json_to_csv(uploaded_file.read().decode("utf-8"))
+
+                if result:
+                    saved_file_path = save_file(save_path, result)
+
+                    if saved_file_path:
+                        file_name = os.path.basename(saved_file_path)
+                        return JsonResponse({"download_link": saved_file_path})
+                    else:
+                        return JsonResponse({"error": "Failed to save the CSV file."})
+                else:
+                    return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
+
+        elif file_source == 'remote':
+            file_url = request.POST.get('file_url', '')
+            if file_url:
+                # Verifique se o URL termina com .csv ou .json
+                if file_url.lower().endswith(('.csv', '.json')):
+                    response = requests.get(file_url)
+                    if response.status_code == 200:
+                        file_content = response.content
+                        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                        if file_url.lower().endswith('.csv'):
+                            # Se o URL termina com .csv, processe como CSV
+                            relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
+                            result = csv_to_json(io.BytesIO(file_content))
+                        else:
+                            # Se o URL termina com .json, processe como JSON
+                            relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
+                            result = json_to_csv(file_content)
+                        save_path = os.path.join(BASE_DIR, relative_path)
+                        if result:
+                            saved_file_path = save_file(save_path, result)
+                            if saved_file_path:
+                                file_name = os.path.basename(saved_file_path)
+                                return JsonResponse({"download_link": saved_file_path})
+                            else:
+                                 return JsonResponse({"error": "Failed to save the file."})
+                        else:
+                            return JsonResponse({"error": f"Conversion failed with the following error: {result[1]}"})
+                    else:
+                        return JsonResponse({
+                                                "error": f"Failed to download the file from the provided URL. Status code: {response.status_code}"})
+                else:
+                    return JsonResponse({"error": "Unsupported file type in URL."})
+
+
+#Apagar
+def convertView1(request):
     if request.method == 'POST':
         uploaded_file = request.FILES['uploaded_file']  # Ensure the input field in your HTML form is named 'uploaded_file'
         if uploaded_file:
