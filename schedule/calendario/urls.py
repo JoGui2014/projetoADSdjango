@@ -14,6 +14,7 @@ urlpatterns = [
     path('class_rooms/', views.class_rooms, name='class_rooms'),
     path('observeCalendar/', views.observeCalendar, name='observeCalendar'),
     path('get_events/', views.get_events, name='get_events'),
+    path('compare/', views.compare_view, name='compare'),
     path('calculator/', calculator, name='calculator'),
     path('calcular-expressao/', calcular_expressao, name='calcular_expressao'),
     path('heatmap/', views.heatmap_view, name='heatmap'),

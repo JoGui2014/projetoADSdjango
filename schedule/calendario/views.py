@@ -3,8 +3,6 @@ from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render, redirect, get_object_or_404
 
 # Create your views here.
-
-
 from django.http import JsonResponse
 import sys
 import json
@@ -144,22 +142,6 @@ def get_informations(request):
         )
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
-
-def get_informations_for_plot(file):
-    if not file.name.endswith('.csv'):
-        return HttpResponse("Por favor introduza um ficheiro CSV")
-
-    try:
-        result = get_information_sections(file)
-        if result is None:
-            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
-
-        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
-        return number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
-
-    except FileNotFoundError or Exception as e:
-        return HttpResponse(str(e))
-
 
 # Verificar novo critério de qualidade
 def aux_new_criteria(expressao):
@@ -458,7 +440,6 @@ def class_rooms(request):
 
 import random
 
-
 def get_times(row, chosen_schedules, header_row):
     start_time = {'A': '13:00:00', 'B': '08:00:00', 'C': '13:00:00', 'PL': '18:00:00'}
     end_time = {'A': '17:30:00', 'B': '12:30:00', 'C': '17:30:00', 'PL': '22:30:00'}
@@ -637,6 +618,7 @@ import json
 from django.http import JsonResponse
 import io
 
+# Visualizar horário
 def observeCalendar(request):
     global curso_index
     global unidade_execucao_index
@@ -731,7 +713,6 @@ def get_events(request):
 
     return JsonResponse({'error': 'Invalid file or file not found'}, status=400)
 
-
 def process_csv_to_events(data):
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
     events = []
@@ -776,6 +757,7 @@ import plotly.graph_objects as go
 from django.shortcuts import render
 from itertools import combinations
 
+# Gráfico de cordas
 def cordas_view(request):
     cursos_list = []
     sala_curso_dict = {}
@@ -863,6 +845,7 @@ def cordas_view(request):
 import plotly.graph_objects as go
 import plotly.express as px
 
+# Heatmap
 def heatmap_view(request):
     data = []
     x = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
@@ -912,3 +895,64 @@ def heatmap_view(request):
 
     graph_json = fig.to_json()
     return render(request, 'calendario/heatmap.html', {'graph_json': graph_json})
+
+import pandas as pd
+import plotly.colors as colors
+import random
+import plotly.offline as pyo
+import matplotlib.pyplot as plt
+
+# Gráfico de coordenadas paralelas
+def get_informations_for_plot(file):
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Por favor introduza um ficheiro csv válido.")
+    try:
+        result = get_information_sections(file)
+        if result is None:
+            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
+
+        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
+        return number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
+
+    except FileNotFoundError or Exception as e:
+        return HttpResponse(str(e))
+
+def compare_view(request):
+    global lotacao_index, inscritos_index, sala_index, sala_expectavel, sala_real
+    schedule_criteria_dictionary = {}
+    if request.method == 'POST':
+        uploaded_files = request.FILES.getlist('fileInput')
+        for uploaded_file in uploaded_files:
+            first_line = uploaded_file.readline().decode('utf-8')
+            values = first_line.strip().split(';')
+            lotacao_index = values.index('Lotação')
+            inscritos_index = values.index('Inscritos no turno')
+            sala_index = values.index('Sala da aula')
+            sala_expectavel = values.index('Características da sala pedida para a aula')
+            sala_real = values.index('Características reais da sala')
+            criteria = get_informations_for_plot(uploaded_file)
+            schedule_criteria_dictionary[uploaded_file.name] = criteria
+
+    criteria_title = ["Número de aulas em sobrelotação","Número de alunos com aulas em sobrelotação","Número de aulas sem sala atribuída","Número de características desperdiçadas nas salas atribuídas às aulas","Número de salas sem as características solicitadas pelo docente"]
+    columns = ["Critérios de qualidade"] + list(schedule_criteria_dictionary.keys())
+    rows = list(zip(*[[title] + list(schedule_criteria_dictionary[key][i] for key in schedule_criteria_dictionary.keys()) for i, title in enumerate(criteria_title)]))
+
+    columns_parallel = list(schedule_criteria_dictionary.values())
+
+    # Convert the dictionary to a DataFrame
+    df = pd.DataFrame.from_dict(schedule_criteria_dictionary, orient='index', columns=criteria_title)
+
+    color_list = [f'rgb({random.randint(0, 255)}, {random.randint(0, 255)}, {random.randint(0, 255)})' for _ in range(len(df))]
+    parallel_fig = px.parallel_coordinates(df, color = color_list)
+
+    table_fig = go.Figure(data=[go.Table(
+        header=dict(values=columns),
+        cells=dict(values=rows)
+    )])
+
+    parallel_chart_html = pyo.plot(parallel_fig, output_type='div')
+    table_html = pyo.plot(table_fig, output_type='div')
+
+    #print(schedule_criteria_dictionary)
+
+    return render(request, 'calendario/compare.html', {'parallel_chart_html': parallel_chart_html, 'table_html': table_html})
