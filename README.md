@@ -1,4 +1,5 @@
 **Ficheiros na diretoria static:**
+
 -> HorarioDeExemplo.csv
 
 -> CaracterizaçãoDasSalas.csv
@@ -12,6 +13,7 @@
 -> FicheiroConvertidoJson.json (último ficheiro de conversão de json para csv)
 
 -> HorarioNovo.csv (último ficheiro de criação de horário)
+
 
 **Instruções para a execução do projeto:**
 
