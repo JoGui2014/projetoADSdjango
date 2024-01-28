@@ -55,9 +55,10 @@ def get_information_sections(file):
                     tipo_de_sala_expectado=None
                     tipo_de_sala_real=None
                     nao_necessita_sala = 0
-                    #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/overpopulated_classes.csv")
-                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\overpopulated_classes.csv"
+
+                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    relative_path = os.path.join('calendario', 'static', 'overpopulated_classes.csv')
+                    save_path = os.path.join(BASE_DIR, relative_path)
                     with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                         csv_writer = csv.writer(csv_file)
                         csv_writer.writerow(header_row)
@@ -143,6 +144,22 @@ def get_informations(request):
         )
     except FileNotFoundError or Exception as e:
         return HttpResponse(str(e))
+
+def get_informations_for_plot(file):
+    if not file.name.endswith('.csv'):
+        return HttpResponse("Por favor introduza um ficheiro CSV")
+
+    try:
+        result = get_information_sections(file)
+        if result is None:
+            return HttpResponse("An error occurred while processing the file or the columns aren't valid.")
+
+        number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas = result
+        return number, sum_students, aulas_sem_sala, salas_desperdicadas, salas_sem_caracteristicas
+
+    except FileNotFoundError or Exception as e:
+        return HttpResponse(str(e))
+
 
 # Verificar novo critério de qualidade
 def aux_new_criteria(expressao):
@@ -306,9 +323,9 @@ def convertView(request):
                 file_path = csv_to_json(uploaded_file)
                 if file_path:
                     # Define the desired save path for the file
-                    #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                    #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoJson.json")
-                    save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoJson.json"
+                    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoJson.json')
+                    save_path = os.path.join(BASE_DIR, relative_path)
                     # Save the file using the save_file function
                     saved_file_path = save_file(save_path, file_path)
 
@@ -321,9 +338,9 @@ def convertView(request):
                         return JsonResponse({"error": "Failed to save the file."})
             elif uploaded_file.name.endswith(".json"):
                 # Handle JSON to CSV conversion
-                #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/FicheiroConvertidoCsv.csv")
-                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\FicheiroConvertidoCsv.csv"
+                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                relative_path = os.path.join('calendario', 'static', 'FicheiroConvertidoCsv.csv')
+                save_path = os.path.join(BASE_DIR, relative_path)
                 result = json_to_csv(uploaded_file.read().decode("utf-8"))
                 if result:
                     # Save the CSV data using the save_file function
@@ -454,9 +471,10 @@ def class_rooms(request):
             csv_data = [line.split(';') for line in csv_data.split('\n') if line]  # Convert CSV string to a list of lists
             header_row = csv_data[0]
             if csv_data and class_rooms_csv_data:
-                #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-                #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/HorarioNovo.csv")
-                save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioNovo.csv"
+                BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                relative_path = os.path.join('calendario', 'static', 'HorarioNovo.csv')
+                save_path = os.path.join(BASE_DIR, relative_path)
+
                 with open(save_path, "w", newline="", encoding="utf-8") as csv_file:
                     csv_writer = csv.writer(csv_file, delimiter=';')
                     csv_writer.writerow(header_row)
@@ -538,7 +556,7 @@ def get_times(row, chosen_schedules, header_row):
         chosen_start_minutes = random.randint(start_time_minutes, end_time_minutes - 30)
 
         # Convertendo a diferença em minutos para um número de incrementos de 30 minutos
-        minute_difference = (end_time_minutes - chosen_start_minutes) // 30
+        minute_difference = (end_time_minutes - chosen_start_minutes)
 
         # Gerando um número aleatório de incrementos de 30 minutos e convertendo de volta para minutos
         duration_in_minutes = random.choice(duration[ano_letivo])
@@ -555,11 +573,13 @@ def get_times(row, chosen_schedules, header_row):
                     and overlap(convert_to_time(chosen_start_minutes), end, schedule_entry['start_time'],
                                 schedule_entry['end_time'])
             ):
-                #print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)}, Fim: {convert_to_time(chosen_end_minutes)} - Sala indisponível (sobreposição de horários).")
                 return None, None
-
-        print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
-        return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
+        if (convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 60
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 90
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 120
+                or convert_to_minutes(convert_to_time(chosen_end_minutes)) - convert_to_minutes(convert_to_time(chosen_start_minutes)) == 180):
+            print(f"Aula para {ano_letivo} - Início: {convert_to_time(chosen_start_minutes)},Fim: {convert_to_time(chosen_end_minutes)} - Sala disponível.")
+            return convert_to_time(chosen_start_minutes), convert_to_time(chosen_end_minutes)
 
     return None, None
 
@@ -570,8 +590,10 @@ def convert_to_minutes(time_string):
 
 def convert_to_time(minutes):
     hours, remainder = divmod(minutes, 60)
-    minutes, _ = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:00"
+    if remainder > 30:
+        return f"{hours:02d}:00:00"
+    else:
+        return f"{hours:02d}:30:00"
 
 def find_available_room(class_rooms_csv_data, row, header_row, chosen_schedules):
     day = row[header_row.index('Dia')]
@@ -684,10 +706,12 @@ def overlap(start_time_1, end_time_1, start_time_2, end_time_2):
 
     return condition_1 or condition_2 or condition_3 or condition_4
 
+'''
 def save_file(save_path, file_content):
     with open(save_path, 'w', encoding='utf-8') as file:
         file.write(file_content)
     return save_path
+'''
 
 def home(request):
     return render(request, 'calendario/homePage.html')
@@ -721,9 +745,9 @@ def observeCalendar(request):
 
     if request.method == 'POST' and 'file' in request.FILES:
         uploaded_file = request.FILES['file']
-        #BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        #save_path = os.path.join(BASE_DIR, "schedule/calendario/static/")
-        save_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static"
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        relative_path = os.path.join('calendario', 'static', 'HorarioUpload.csv')
+        save_path = os.path.join(BASE_DIR, relative_path)
         fs = FileSystemStorage(location=save_path)
         filename = fs.save(uploaded_file.name, uploaded_file)
 
@@ -756,6 +780,7 @@ def observeCalendar(request):
                     'title': event['title'],
                     'start': event['start_time'],
                     'end': event['end_time'],
+                    'quality': event['quality']
                 }
                 for event in events
             ]
@@ -768,7 +793,9 @@ import os
 def get_events(request):
     global salas_desperdicadas_list, salas_sem_caracteristicas_list, aulas_sobrelotadas_list, aulas_sem_sala_list
     # Replace with the absolute path to your CSV file
-    file_path = r"C:\Users\inesc\OneDrive - ISCTE-IUL\Documentos\Iscte\Mestrado\ADS\projetoADSdjango\schedule\calendario\static\HorarioDeExemplo.csv"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    relative_path = os.path.join('calendario', 'static', 'HorarioDeExemplo.csv')
+    file_path = os.path.join(BASE_DIR, relative_path)
     if file_path.endswith('.csv'):
         with open(file_path, 'r', encoding="UTF-8") as file:
             csv_reader = csv.DictReader(file, delimiter=';')
